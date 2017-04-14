@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>YangShanghai's HQ</title>
+	<link rel="shortcut icon" href="/image/logo.png">
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+	<link rel="alternate" type="application/rss+xml" title="RSS" href="http://feeds.feedburner.com/lzyy">
+</head>
+
+	<body>
+		<div id="nav">
+	<div class="wrapper">
+		<div id="logo"><a href="/"><img src="/image/logo.png" /></a></h1></div>
+		<ul>
+			<li id="category-iOS"><a href="/category/iOS.html">iOS</a></li>
+			<li id="category-tech"><a href="/category/tech.html">技术</a></li>
+			<li id="category-essay"><a href="/category/essay.html">随笔</a></li>
+			<li id="category-reading"><a href="/category/reading.html">阅读</a></li>
+			<li id="category-design"><a href="/category/design.html">设计</a></li>
+			<li id="category-quotes"><a href="/quotes.html">引言</a></li>
+		</ul>
+	</div>
+</div>
+
+<script>
+var category = location.pathname;
+if (category == '/') {
+	document.getElementById('category-all').style.textDecoration = "underline";
+} else if (category == '/category/iOS.html') {
+	document.getElementById('category-iOS').style.textDecoration = "underline";
+} else if (category == '/category/tech.html') {
+	document.getElementById('category-tech').style.textDecoration = "underline";
+} else if (category == '/category/design.html') {
+	document.getElementById('category-design').style.textDecoration = "underline";
+} else if (category == '/category/essay.html') {
+	document.getElementById('category-essay').style.textDecoration = "underline";
+} else if (category == '/category/reading.html') {
+	document.getElementById('category-reading').style.textDecoration = "underline";
+} else if (category == '/quotes.html') {
+	document.getElementById('category-quotes').style.textDecoration = "underline";
+} else if (category == '/category/weekly-recommendation.html') {
+	document.getElementById('weekly-recommendation').style.textDecoration = "underline";
+}
+
+</script>
+
+		<div class="wrapper main">
+			<div id="content">
+				<h2>使用objection来模块化开发iOS项目</h2>
+				<div class="cnt">
+					<p><a href="https://github.com/atomicobject/objection">objection</a> 是一个轻量级的依赖注入框架，受<a href="https://code.google.com/p/google-guice/">Guice</a>的启发，<a href="http://www.google.com/wallet/">Google Wallet</a> 也是使用的该项目。「依赖注入」是面向对象编程的一种设计模式，用来减少代码之间的耦合度。通常基于接口来实现，也就是说不需要new一个对象，而是通过相关的控制器来获取对象。2013年最火的PHP框架 <a href="http://laravel.com">laravel</a> 就是其中的典型。</p>
+
+<p>假设有以下场景：ViewControllerA.view里有一个button，点击之后push一个ViewControllerB，最简单的写法类似这样：</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">viewDidLoad</span>
+<span class="p">{</span>
+    <span class="p">[</span><span class="n">super</span> <span class="nf">viewDidLoad</span><span class="p">];</span>
+    <span class="n">UIButton</span> <span class="o">*</span><span class="n">button</span> <span class="o">=</span> <span class="p">[</span><span class="n">UIButton</span> <span class="nf">buttonWithType</span><span class="p">:</span><span class="n">UIButtonTypeSystem</span><span class="p">];</span>
+    <span class="n">button</span><span class="p">.</span><span class="n">frame</span> <span class="o">=</span> <span class="n">CGRectMake</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">30</span><span class="p">);</span>
+    <span class="p">[</span><span class="n">button</span> <span class="nf">setTitle</span><span class="p">:</span><span class="s">@"Button"</span> <span class="nf">forState</span><span class="p">:</span><span class="n">UIControlStateNormal</span><span class="p">];</span>
+    <span class="p">[</span><span class="n">button</span> <span class="nf">addTarget</span><span class="p">:</span><span class="n">self</span> <span class="nf">action</span><span class="p">:</span><span class="k">@selector</span><span class="p">(</span><span class="n">buttonTapped</span><span class="p">)</span> <span class="n">forControlEvents</span><span class="o">:</span><span class="n">UIControlEventTouchUpInside</span><span class="p">];</span>
+    <span class="p">[</span><span class="n">self</span><span class="p">.</span><span class="n">view</span> <span class="nf">addSubview</span><span class="p">:</span><span class="n">button</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="o">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">buttonTapped</span>
+<span class="p">{</span>
+	<span class="n">ViewControllerB</span> <span class="o">*</span><span class="n">vc</span> <span class="o">=</span> <span class="p">[[</span><span class="n">ViewControllerB</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+    <span class="p">[</span><span class="n">self</span><span class="p">.</span><span class="n">navigationController</span> <span class="nf">pushViewController</span><span class="p">:</span><span class="n">vc</span> <span class="nf">animated</span><span class="p">:</span><span class="nb">YES</span><span class="p">];</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>这样写的一个问题是，ViewControllerA需要import ViewControllerB，也就是对ViewControllerB产生了依赖。依赖的东西越多，维护起来就越麻烦，也容易出现循环依赖的问题，而objection正好可以处理这些问题。</p>
+
+<p>实现方法是：先定义一个协议(protocol)，然后通过objection来注册这个协议对应的class，需要的时候，可以获取该协议对应的object。对于使用方无需关心到底使用的是哪个Class，反正该有的方法、属性都有了(在协议中指定)。这样就去除了对某个特定Class的依赖。也就是通常所说的「面向接口编程」。</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">JSObjectionInjector</span> <span class="o">*</span><span class="n">injector</span> <span class="o">=</span> <span class="p">[</span><span class="n">JSObjection</span> <span class="nf">defaultInjector</span><span class="p">];</span> <span class="c1">// [1]
+</span><span class="n">UIViewController</span> <span class="o">&lt;</span><span class="n">ViewControllerAProtocol</span><span class="o">&gt;</span> <span class="o">*</span><span class="n">vc</span> <span class="o">=</span> <span class="p">[</span><span class="n">injector</span> <span class="nf">getObject</span><span class="p">:</span><span class="k">@protocol</span><span class="err">(</span><span class="nc">ViewControllerAProtocol</span><span class="p">)];</span> <span class="c1">// [2]
+</span><span class="n">vc</span><span class="p">.</span><span class="n">backgroundColor</span> <span class="o">=</span> <span class="p">[</span><span class="n">UIColor</span> <span class="nf">lightGrayColor</span><span class="p">];</span> <span class="c1">// [3]
+</span><span class="n">UINavigationController</span> <span class="o">*</span><span class="n">nc</span> <span class="o">=</span> <span class="p">[[</span><span class="n">UINavigationController</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithRootViewController</span><span class="p">:</span><span class="n">vc</span><span class="p">];</span>
+<span class="n">self</span><span class="p">.</span><span class="n">window</span><span class="p">.</span><span class="n">rootViewController</span> <span class="o">=</span> <span class="n">nc</span><span class="p">;</span></code></pre></figure>
+
+<ul>
+  <li>[1] 获取默认的injector，这个injector已经注册过<code class="highlighter-rouge">ViewControllerAProtocol</code>了。</li>
+  <li>[2] 获取<code class="highlighter-rouge">ViewControllerAProtocol</code>对应的Object。</li>
+  <li>[3] 拿到VC后，设置它的某些属性，比如这里的backgroundColor，因为在<code class="highlighter-rouge">ViewControllerAProtocol</code>里有定义这个属性，所以不会有warning。</li>
+</ul>
+
+<p>可以看到这里没有引用ViewControllerA。再来看看这个<code class="highlighter-rouge">ViewControllerAProtocol</code>是如何注册到injector中的，这里涉及到了<code class="highlighter-rouge">Module</code>，对Protocol的注册都是在Module中完成的。Module只要继承<code class="highlighter-rouge">JSObjectionModule</code>这个Class即可。</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">@interface</span> <span class="nc">ViewControllerAModule</span> <span class="p">:</span> <span class="nc">JSObjectionModule</span>
+<span class="k">@end</span>
+
+<span class="k">@implementation</span> <span class="nc">ViewControllerAModule</span>
+<span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">configure</span>
+<span class="p">{</span>
+    <span class="p">[</span><span class="n">self</span> <span class="nf">bindClass</span><span class="p">:[</span><span class="n">ViewControllerA</span> <span class="nf">class</span><span class="p">]</span> <span class="nf">toProtocol</span><span class="p">:</span><span class="k">@protocol</span><span class="err">(</span><span class="nc">ViewControllerAProtocol</span><span class="p">)];</span>
+<span class="p">}</span>
+<span class="k">@end</span></code></pre></figure>
+
+<p>绑定操作是在<code class="highlighter-rouge">configure</code>方法里进行的，这个方法在被添加到injector里时会被自动触发。</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">JSObjectionInjector</span> <span class="o">*</span><span class="n">injector</span> <span class="o">=</span> <span class="p">[</span><span class="n">JSObjection</span> <span class="nf">defaultInjector</span><span class="p">];</span> <span class="c1">// [1]
+</span><span class="n">injector</span> <span class="o">=</span> <span class="n">injector</span> <span class="p">?</span> <span class="p">:</span> <span class="p">[</span><span class="n">JSObjection</span> <span class="nf">createInjector</span><span class="p">];</span> <span class="c1">// [2]
+</span><span class="n">injector</span> <span class="o">=</span> <span class="p">[</span><span class="n">injector</span> <span class="nf">withModule</span><span class="p">:[[</span><span class="n">ViewControllerAModule</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">]];</span> <span class="c1">// [3]
+</span><span class="p">[</span><span class="n">JSObjection</span> <span class="nf">setDefaultInjector</span><span class="p">:</span><span class="n">injector</span><span class="p">];</span> <span class="o">//</span> <span class="p">[</span><span class="mi">4</span><span class="p">]</span></code></pre></figure>
+
+<ul>
+  <li>[1] 获取默认的 injector</li>
+  <li>[2] 如果默认的 injector 不存在，就新建一个</li>
+  <li>[3] 往这个 injector 里注册我们的 Module</li>
+  <li>[4] 设置该 injector 为默认的 injector</li>
+</ul>
+
+<p>这段代码可以直接放到 <code class="highlighter-rouge">+ (void)load</code>里执行，这样就可以避免在AppDelegate里import各种Module。</p>
+
+<p>因为我们无法直接获得对应的Class，所以必须要在协议里定义好对外暴露的方法和属性，然后该Class也要实现该协议。</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">@protocol</span> <span class="nc">ViewControllerAProtocol</span> <span class="o">&lt;</span><span class="n">NSObject</span><span class="o">&gt;</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">)</span> <span class="n">NSUInteger</span> <span class="n">currentIndex</span><span class="p">;</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">)</span> <span class="n">UIColor</span> <span class="o">*</span><span class="n">backgroundColor</span><span class="p">;</span>
+<span class="k">@end</span>
+
+<span class="k">@interface</span> <span class="nc">ViewControllerA</span> <span class="p">:</span> <span class="nc">UIViewController</span> <span class="o">&lt;</span><span class="n">ViewControllerAProtocol</span><span class="o">&gt;</span>
+<span class="k">@end</span></code></pre></figure>
+
+<p>通过objection实现依赖注入后，就能更好地实现SRP(Single Responsibility Principle)，代码更简洁，心情更舒畅，生活更美好。拿Pinterest来说，下面的页面就可以划分为3个Section。</p>
+
+<p><img src="/image/demo_4_objection.png" alt="" /></p>
+
+<p>各个Section可以由不同的人负责，然后串到一起就行，也能一定程度地避免MVC(Mess View Controller)的出现。</p>
+
+<p>总体来说，这个lib还是挺靠谱的，已经维护了两年多，也有一些项目在用，对于提高开发成员的效率也会有不少的帮助，可以考虑尝试下。</p>
+
+<p>—- update (2014-04-30) —-</p>
+
+<p>写了个壁纸的demo，<a href="https://github.com/lzyy/bizhi">https://github.com/lzyy/bizhi</a></p>
+
+					<br />
+					--EOF--
+					<p>若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+				</div>
+				<div id="disqus_thread"></div>
+				<script type="text/javascript">
+				  /**
+					* var disqus_identifier; [Optional but recommended: Define a unique identifier (e.g. post id or slug) for this thread]
+					*/
+				  (function() {
+				   var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				   dsq.src = 'http://lzyyblog.disqus.com/embed.js';
+				   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+				  })();
+				</script>
+				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript=lzyyblog">comments powered by Disqus.</a></noscript>
+			</div>
+			<div id="footer">
+	<p style="color:#ccc;font-size:12px;text-align: center">make the world a little better and easier</p>
+	<p style="clear:both"></p>
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1281124-24', 'limboy.me');
+  ga('send', 'pageview');
+
+</script>
+
+		</div>
+	</body>
+</html>

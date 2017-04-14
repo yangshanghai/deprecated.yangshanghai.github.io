@@ -1,0 +1,750 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>YangShanghai's HQ</title>
+	<link rel="shortcut icon" href="/image/logo.png">
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+	<link rel="alternate" type="application/rss+xml" title="RSS" href="http://feeds.feedburner.com/lzyy">
+</head>
+
+	<body>
+		<div id="nav">
+	<div class="wrapper">
+		<div id="logo"><a href="/"><img src="/image/logo.png" /></a></h1></div>
+		<ul>
+			<li id="category-iOS"><a href="/category/iOS.html">iOS</a></li>
+			<li id="category-tech"><a href="/category/tech.html">技术</a></li>
+			<li id="category-essay"><a href="/category/essay.html">随笔</a></li>
+			<li id="category-reading"><a href="/category/reading.html">阅读</a></li>
+			<li id="category-design"><a href="/category/design.html">设计</a></li>
+			<li id="category-quotes"><a href="/quotes.html">引言</a></li>
+		</ul>
+	</div>
+</div>
+
+<script>
+var category = location.pathname;
+if (category == '/') {
+	document.getElementById('category-all').style.textDecoration = "underline";
+} else if (category == '/category/iOS.html') {
+	document.getElementById('category-iOS').style.textDecoration = "underline";
+} else if (category == '/category/tech.html') {
+	document.getElementById('category-tech').style.textDecoration = "underline";
+} else if (category == '/category/design.html') {
+	document.getElementById('category-design').style.textDecoration = "underline";
+} else if (category == '/category/essay.html') {
+	document.getElementById('category-essay').style.textDecoration = "underline";
+} else if (category == '/category/reading.html') {
+	document.getElementById('category-reading').style.textDecoration = "underline";
+} else if (category == '/quotes.html') {
+	document.getElementById('category-quotes').style.textDecoration = "underline";
+} else if (category == '/category/weekly-recommendation.html') {
+	document.getElementById('weekly-recommendation').style.textDecoration = "underline";
+}
+
+</script>
+
+		<div class="wrapper main">
+			<div id="content">
+				<h2>Advanced NSOperations</h2>
+				<div class="cnt">
+					<h3 id="前言">前言</h3>
+
+<p>这篇文章是对 <a href="https://developer.apple.com/videos/wwdc/2015/?id=226">WWDC 2015 Session 226: Advanced NSOperations</a> 的一个小结，在那个视频中，<a href="https://twitter.com/davedelong">Dave DeLong</a> 分享了 NSOperation 的高级玩法，WWDC App 就是基于这套玩法做的，还是挺开阔思路的。</p>
+
+<h3 id="nsoperation-和-nsoperationqueue-简介">NSOperation 和 NSOperationQueue 简介</h3>
+
+<p>我们知道 NSOperation 可以执行一些后台操作，如 HTTP 请求，在 iOS 4.0 之前是基于 NSThread 来实现的，iOS 4.0 带了 GCD，NSOperation 底层也基于 GCD 重写了底层实现。</p>
+
+<p>所以 NSOperation 是 GCD 的高层封装，同时也带来了一些更加便利的功能，比如取消任务，设置依赖等。在进入高级玩法前，先简单的介绍下 NSOperation 和 NSOperationQueue。</p>
+
+<h4 id="nsoperationqueue-maxconcurrentoperationcount">NSOperationQueue maxConcurrentOperationCount</h4>
+
+<p>这个属性表示的是 NSOperationQueue 最多可以同时处理几个任务，假如我们希望它一次只处理一个，也就是线性 Queue，可以设置 <code class="highlighter-rouge">maxConcurrentOperationCount = 1</code></p>
+
+<p><img src="/image/nsoperation-1.png" alt="" /></p>
+
+<p>中间的点表示任务的状态，在上一个任务完成前，下一个任务不会被执行，因为只有一个 worker。</p>
+
+<p>如果希望一次能处理多个，将这个值设置为大于 1 即可，或者直接使用默认值，系统会自动设置一个合理的最大值。</p>
+
+<p><img src="/image/nsoperation-2.png" alt="" /></p>
+
+<h4 id="nsoperation-cancel">NSOperation cancel</h4>
+
+<p>从上面的图可以看到，正在被执行的任务的状态跟在后面排队的状态是不一样的，有这么几种状态：pending, ready, executing, finished, cancelled。</p>
+
+<p><img src="/image/nsoperation-3.png" alt="" /></p>
+
+<p>之前提到过 NSOperation 一个很重要的特性是可以被取消，但不同状态的取消处理也不一样。比如当 Operation 处于 pending, ready 状态时，系统可以去看一下这个 Operation 是否已经被取消了(判断 self.cancelled)，如果是的话，就不执行任务了。但是当 Operation 处于 executing 状态时，取消的操作就只能自己处理了，比如</p>
+
+<div class="language-objc highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9</pre></td><td class="code"><pre><span class="k">@implementation</span> <span class="nc">MyOperation</span><span class="p">:</span> <span class="nc">NSOperation</span>
+<span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">main</span>
+<span class="p">{</span>
+    <span class="c1">// ...
+</span>    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">self</span><span class="p">.</span><span class="n">cancelled</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// executing
+</span>    <span class="p">}</span>
+<span class="p">}</span>
+<span class="k">@end</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<h4 id="nsoperation-dependency">NSOperation dependency</h4>
+
+<p>NSOperation 还有一个很重要的特性是可以设置依赖</p>
+
+<p><img src="/image/nsoperation-4.png" alt="" /></p>
+
+<p>任务 A 需要等待 任务 B 和 任务 C 完成，才能被执行，而任务 B 需要等到 任务 D 完成才能被执行。</p>
+
+<p>当然前提是这些 Operation 都需要被放到某个 Queue 里，这样它们的状态才会发生改变。</p>
+
+<h3 id="高级玩法">高级玩法</h3>
+
+<p>开发 App 的过程中，有一些逻辑是可以共用的，比如登录、网络状况等，最好可以组装起来，就像超能陆战队里的 megabot 一样</p>
+
+<p><img src="/image/megabot.jpg" alt="" /></p>
+
+<p>基于前面提到的 NSOperation / NSOperationQueue 的一些特点，苹果的工程师们想到了他们的解决方法。</p>
+
+<h4 id="condition">Condition</h4>
+
+<p>Condition，也就是条件，它可以被附加到 Operation 上，只有当 Condition 被满足时，Operation 才能被执行。比如只有在有网络的情况下才能进行交易，这时「网络状况」就是附加给「交易」的 Condition。</p>
+
+<p>一个 Condition 主要包含了 3 个方法：</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6</pre></td><td class="code"><pre><span class="c1">// 1</span>
+<span class="kd">static</span> <span class="k">var</span> <span class="nv">isMutuallyExclusive</span><span class="p">:</span> <span class="kt">Bool</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span>
+<span class="c1">// 2</span>
+<span class="kd">func</span> <span class="nf">dependencyForOperation</span><span class="p">(</span><span class="nv">operation</span><span class="p">:</span> <span class="kt">Operation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">NSOperation</span><span class="p">?</span>
+<span class="c1">// 3</span>
+<span class="kd">func</span> <span class="nf">evaluateForOperation</span><span class="p">(</span><span class="nv">operation</span><span class="p">:</span> <span class="kt">Operation</span><span class="p">,</span> <span class="nv">completion</span><span class="p">:</span> <span class="kt">OperationConditionResult</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<ol>
+  <li>这个属性用来表明这个 Condtion 是否是排他的，如果是的话，同一时间只能出现一个该类型的实例，类型的指定是通过设置 <code class="highlighter-rouge">name</code> 来实现的。</li>
+  <li>为传入的 operation 返回一个依赖的 operation，比如「喜欢」这个 Operation 需要用户已处于登录状态，那么「登录」这个 Condition 的这个方法就可以返回一个「登录」的 Operation。</li>
+  <li>这个方法是查看这个 Condition 的执行结果，比如前面的「登录」Operation 结束后，系统将要执行「喜欢」这个 Operation，然后这个方法就会被触发，如果没有错误发生的话，就执行「喜欢」，如果有错误发生「喜欢」就会自动结束。</li>
+</ol>
+
+<p>所以总结起来 Condition 主要干了这么三件事</p>
+
+<p><img src="/image/nsoperation-condition.png" alt="" /></p>
+
+<p>来看一个简单的 Condition (来自 WWDC Sample)</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34</pre></td><td class="code"><pre><span class="kd">struct</span> <span class="kt">ReachabilityCondition</span><span class="p">:</span> <span class="kt">OperationCondition</span> <span class="p">{</span>
+    <span class="kd">static</span> <span class="k">let</span> <span class="nv">hostKey</span> <span class="o">=</span> <span class="s">"Host"</span>
+    <span class="kd">static</span> <span class="k">let</span> <span class="nv">name</span> <span class="o">=</span> <span class="s">"Reachability"</span>
+    <span class="kd">static</span> <span class="k">let</span> <span class="nv">isMutuallyExclusive</span> <span class="o">=</span> <span class="kc">false</span>
+
+    <span class="k">let</span> <span class="nv">host</span><span class="p">:</span> <span class="kt">NSURL</span>
+
+    <span class="c1">// 1</span>
+    <span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="kt">NSURL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 2</span>
+    <span class="kd">func</span> <span class="nf">dependencyForOperation</span><span class="p">(</span><span class="nv">operation</span><span class="p">:</span> <span class="kt">Operation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">NSOperation</span><span class="p">?</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+
+    <span class="kd">func</span> <span class="nf">evaluateForOperation</span><span class="p">(</span><span class="nv">operation</span><span class="p">:</span> <span class="kt">Operation</span><span class="p">,</span> <span class="nv">completion</span><span class="p">:</span> <span class="kt">OperationConditionResult</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">ReachabilityController</span><span class="o">.</span><span class="nf">requestReachability</span><span class="p">(</span><span class="n">host</span><span class="p">)</span> <span class="p">{</span> <span class="n">reachable</span> <span class="k">in</span>
+            <span class="k">if</span> <span class="n">reachable</span> <span class="p">{</span>
+                <span class="c1">// 3</span>
+                <span class="nf">completion</span><span class="p">(</span><span class="o">.</span><span class="kt">Satisfied</span><span class="p">)</span>
+            <span class="p">}</span>
+            <span class="k">else</span> <span class="p">{</span>
+                <span class="k">let</span> <span class="nv">error</span> <span class="o">=</span> <span class="kt">NSError</span><span class="p">(</span><span class="nv">code</span><span class="p">:</span> <span class="o">.</span><span class="kt">ConditionFailed</span><span class="p">,</span> <span class="nv">userInfo</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="kt">OperationConditionKey</span><span class="p">:</span> <span class="k">self</span><span class="o">.</span><span class="k">dynamicType</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="k">self</span><span class="o">.</span><span class="k">dynamicType</span><span class="o">.</span><span class="nv">hostKey</span><span class="p">:</span> <span class="k">self</span><span class="o">.</span><span class="n">host</span>
+                <span class="p">])</span>
+                <span class="c1">// 4</span>
+                <span class="nf">completion</span><span class="p">(</span><span class="o">.</span><span class="kt">Failed</span><span class="p">(</span><span class="n">error</span><span class="p">))</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<ol>
+  <li>Condtion 初始化时可以传参数进来。</li>
+  <li>这个 Condition 没有生成一个 <code class="highlighter-rouge">dependencyForOperation</code>，因为生成依赖 Operation 的目的是当这个 Operation 运行完后，可以在 evaluateForOperation 时获取之前的运行结果，而这里直接调用 ReachabilityController 的 requestReachability 方法就可以了，所以就免去了这一步。</li>
+  <li>当结果符合预期时，调用 <code class="highlighter-rouge">completion(.Satisfied)</code></li>
+  <li>当出现异常时，调用 <code class="highlighter-rouge">completion(.Failed(error))</code></li>
+</ol>
+
+<h4 id="operation">Operation</h4>
+
+<p><code class="highlighter-rouge">Operation</code> 继承自 <code class="highlighter-rouge">NSOperation</code>，同时添加了一些方法，主要可以分为 4 部分</p>
+
+<ul>
+  <li>设置状态变量，同时手动设置 KVO</li>
+  <li>执行 conditions 的 <code class="highlighter-rouge">evaluateForOperation</code> 方法</li>
+  <li>添加 Observer</li>
+  <li>添加 Condtion</li>
+</ul>
+
+<h5 id="设置状态变量同时手动设置-kvo">设置状态变量，同时手动设置 KVO</h5>
+
+<p>在系统提供的状态的基础上，又添加了一些新的状态，如 <code class="highlighter-rouge">EvaluatingConditions</code>, <code class="highlighter-rouge">Pending</code> 等，这些状态的改变都需要触发内置状态的 KVO，如 <code class="highlighter-rouge">isExecuting</code>, <code class="highlighter-rouge">isFinished</code>, <code class="highlighter-rouge">isReady</code> 等。通常的做法会是这样：</p>
+
+<div class="language-objc highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3</pre></td><td class="code"><pre><span class="p">[</span><span class="n">self</span> <span class="nf">willChangeValueForKey</span><span class="p">:</span><span class="s">@"isExecuting"</span><span class="p">];</span>
+<span class="n">_state</span> <span class="o">=</span> <span class="n">Executing</span><span class="p">;</span>
+<span class="p">[</span><span class="n">self</span> <span class="nf">didChangeValueForKey</span><span class="p">:</span><span class="s">@"isExecuting"</span><span class="p">];</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+<p>当只有少量的状态改变时，在前后包一层还可以接受，但如果多了的话，就不美观了，这时可以使用 KVO 的一个方法 <code class="highlighter-rouge">+ keyPathsForValuesAffectingValueForKey:</code>，它的意思是，哪些 keyPaths 的改变会导致 <code class="highlighter-rouge">Key</code> 发生变化。所以可以定义这几个方法，然后正常设置 <code class="highlighter-rouge">state</code> 就可以了。</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11</pre></td><td class="code"><pre><span class="kd">class</span> <span class="kd">func</span> <span class="nf">keyPathsForValuesAffectingIsReady</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Set</span><span class="o">&lt;</span><span class="kt">NSObject</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s">"state"</span><span class="p">]</span>
+<span class="p">}</span>
+
+<span class="kd">class</span> <span class="kd">func</span> <span class="nf">keyPathsForValuesAffectingIsExecuting</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Set</span><span class="o">&lt;</span><span class="kt">NSObject</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s">"state"</span><span class="p">]</span>
+<span class="p">}</span>
+
+<span class="kd">class</span> <span class="kd">func</span> <span class="nf">keyPathsForValuesAffectingIsFinished</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Set</span><span class="o">&lt;</span><span class="kt">NSObject</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s">"state"</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<p>当然，这只是完成了一半，系统知道 state 变了后， <code class="highlighter-rouge">isReady</code> 会变，然后就会调用 <code class="highlighter-rouge">ready</code> 方法，所以这三个方法我们也要一并覆盖掉。</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29</pre></td><td class="code"><pre><span class="k">override</span> <span class="k">var</span> <span class="nv">executing</span><span class="p">:</span> <span class="kt">Bool</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">state</span> <span class="o">==</span> <span class="o">.</span><span class="kt">Executing</span>
+<span class="p">}</span>
+
+<span class="k">override</span> <span class="k">var</span> <span class="nv">finished</span><span class="p">:</span> <span class="kt">Bool</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">state</span> <span class="o">==</span> <span class="o">.</span><span class="kt">Finished</span>
+<span class="p">}</span>
+
+<span class="k">override</span> <span class="k">var</span> <span class="nv">ready</span><span class="p">:</span> <span class="kt">Bool</span> <span class="p">{</span>
+    <span class="k">switch</span> <span class="n">state</span> <span class="p">{</span>
+
+        <span class="k">case</span> <span class="o">.</span><span class="kt">Pending</span><span class="p">:</span>
+            <span class="c1">// 省去不相关的代码</span>
+            <span class="k">if</span> <span class="k">super</span><span class="o">.</span><span class="n">ready</span> <span class="p">{</span>
+                <span class="c1">// 1</span>
+                <span class="nf">evaluateConditions</span><span class="p">()</span>
+            <span class="p">}</span>
+
+            <span class="c1">// Until conditions have been evaluated, "isReady" returns false</span>
+            <span class="k">return</span> <span class="kc">false</span>
+
+        <span class="k">case</span> <span class="o">.</span><span class="kt">Ready</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">super</span><span class="o">.</span><span class="n">ready</span> <span class="o">||</span> <span class="n">cancelled</span>
+
+        <span class="k">default</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">false</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<ol>
+  <li>可以看到，当系统在问某个 Operation 是否 ready 时，<code class="highlighter-rouge">evaluateConditions</code> 方法会被触发，这里包含了该 Operation 的所有 Conditions 的 <code class="highlighter-rouge">evaluateForOperation</code> 的执行结果。</li>
+</ol>
+
+<h5 id="执行-conditions-的-evaluateforoperation-方法">执行 conditions 的 <code class="highlighter-rouge">evaluateForOperation</code> 方法</h5>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11</pre></td><td class="code"><pre><span class="kd">private</span> <span class="kd">func</span> <span class="nf">evaluateConditions</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nf">assert</span><span class="p">(</span><span class="n">state</span> <span class="o">==</span> <span class="o">.</span><span class="kt">Pending</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">cancelled</span><span class="p">,</span> <span class="s">"evaluateConditions() was called out-of-order"</span><span class="p">)</span>
+
+    <span class="n">state</span> <span class="o">=</span> <span class="o">.</span><span class="kt">EvaluatingConditions</span>
+
+    <span class="c1">// 1</span>
+    <span class="kt">OperationConditionEvaluator</span><span class="o">.</span><span class="nf">evaluate</span><span class="p">(</span><span class="n">conditions</span><span class="p">,</span> <span class="nv">operation</span><span class="p">:</span> <span class="k">self</span><span class="p">)</span> <span class="p">{</span> <span class="n">failures</span> <span class="k">in</span>
+        <span class="k">self</span><span class="o">.</span><span class="n">_internalErrors</span><span class="o">.</span><span class="nf">extend</span><span class="p">(</span><span class="n">failures</span><span class="p">)</span>
+        <span class="k">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="o">.</span><span class="kt">Ready</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<ol>
+  <li>遍历当前 Operation 的 conditions，执行它们的 <code class="highlighter-rouge">evaluateForOperation</code> 方法，然后将错误保存在 <code class="highlighter-rouge">_internalErrors</code> 里，同时将当前的状态设置为 <code class="highlighter-rouge">.Ready</code>。</li>
+</ol>
+
+<p>或许你会问，如果出现错误，是不是表示条件不满足，如果条件不满足，为什么还要将状态设置为 <code class="highlighter-rouge">.Ready</code>？ 这是因为当状态设置为 <code class="highlighter-rouge">.Ready</code> 后，就会执行 <code class="highlighter-rouge">main</code> 方法，在那里会对 <code class="highlighter-rouge">_internalErrors</code> 做统一判断。</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17</pre></td><td class="code"><pre><span class="k">override</span> <span class="kd">final</span> <span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nf">assert</span><span class="p">(</span><span class="n">state</span> <span class="o">==</span> <span class="o">.</span><span class="kt">Ready</span><span class="p">,</span> <span class="s">"This operation must be performed on an operation queue."</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">_internalErrors</span><span class="o">.</span><span class="n">isEmpty</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">cancelled</span> <span class="p">{</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="o">.</span><span class="kt">Executing</span>
+
+        <span class="c1">// 1</span>
+        <span class="k">for</span> <span class="n">observer</span> <span class="k">in</span> <span class="n">observers</span> <span class="p">{</span>
+            <span class="n">observer</span><span class="o">.</span><span class="nf">operationDidStart</span><span class="p">(</span><span class="k">self</span><span class="p">)</span>
+        <span class="p">}</span>
+
+        <span class="nf">execute</span><span class="p">()</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+        <span class="nf">finish</span><span class="p">()</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<ol>
+  <li>这里出现了 observer，当 Operation 处于不同状态时，会调用 observers 的不同方法</li>
+</ol>
+
+<h5 id="添加-observers">添加 Observers</h5>
+
+<p>observer 的实现还是比较简单的，首先定义一个 Protocol，所有的 observer 都需要实现这个 Protocol 里的方法，然后 Operation 内置一个数组作为容器，<code class="highlighter-rouge">addObserver</code> 时，将 observer 添加到容器，当处于不同状态时，遍历容器里的 observer，调用相应的方法。</p>
+
+<p>这不免让我们想起了 delegate，跟 delegate 相比，observer 的好处就在于可以指定多个观察者，而 delegate 只能指定一个。</p>
+
+<h5 id="添加-condtions">添加 Condtions</h5>
+
+<p>跟 observer 的实现思路基本一致。你或许会问，添加的这些 Conditions 什么时候会被触发呢？没错，就是在将 Operation 添加到 OperationQueue 时。</p>
+
+<h4 id="operationqueue">OperationQueue</h4>
+
+<p><code class="highlighter-rouge">OperationQueue</code> 也是继承自系统的 <code class="highlighter-rouge">NSOperationQueue</code>，同时重写了 <code class="highlighter-rouge">addOperation</code> 方法，这个方法主要做了 3 件事</p>
+
+<ul>
+  <li>给 Operation 添加 observer</li>
+  <li>处理 Operation 的 dependencies 的 <code class="highlighter-rouge">dependencyForOperation</code></li>
+  <li>处理 Operation 的 dependencies 的排他性</li>
+</ul>
+
+<h5 id="给-operation-添加-observer">给 Operation 添加 observer</h5>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14</pre></td><td class="code"><pre><span class="k">let</span> <span class="nv">delegate</span> <span class="o">=</span> <span class="kt">BlockObserver</span><span class="p">(</span>
+    <span class="nv">startHandler</span><span class="p">:</span> <span class="kc">nil</span><span class="p">,</span>
+    <span class="nv">produceHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">[</span><span class="k">weak</span> <span class="k">self</span><span class="p">]</span> <span class="k">in</span>
+        <span class="c1">// 1</span>
+        <span class="k">self</span><span class="p">?</span><span class="o">.</span><span class="nf">addOperation</span><span class="p">(</span><span class="nv">$1</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="nv">finishHandler</span><span class="p">:</span> <span class="p">{</span> <span class="p">[</span><span class="k">weak</span> <span class="k">self</span><span class="p">]</span> <span class="k">in</span>
+        <span class="k">if</span> <span class="k">let</span> <span class="nv">q</span> <span class="o">=</span> <span class="k">self</span> <span class="p">{</span>
+            <span class="c1">// 2</span>
+            <span class="n">q</span><span class="o">.</span><span class="n">delegate</span><span class="p">?</span><span class="o">.</span><span class="nf">operationQueue</span><span class="p">?(</span><span class="n">q</span><span class="p">,</span> <span class="nv">operationDidFinish</span><span class="p">:</span> <span class="nv">$0</span><span class="p">,</span> <span class="nv">withErrors</span><span class="p">:</span> <span class="nv">$1</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="n">op</span><span class="o">.</span><span class="nf">addObserver</span><span class="p">(</span><span class="n">delegate</span><span class="p">)</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<ol>
+  <li>我们前面说过，一个 Operation 可以生成一个新的 Operation，这个 Operation 生成后也需要被放到 Queue 里，这个放置的过程就是在这个 delegate 里实现的。</li>
+  <li>operationQueue 自己有一个 delegate，当 queue 里的一个 operation 执行完时，会向 delegate 报告。</li>
+</ol>
+
+<h5 id="处理-operation-的-dependencies-的-dependencyforoperation">处理 Operation 的 dependencies 的 dependencyForOperation</h5>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10</pre></td><td class="code"><pre><span class="c1">// Extract any dependencies needed by this operation.</span>
+<span class="k">let</span> <span class="nv">dependencies</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">conditions</span><span class="o">.</span><span class="n">flatMap</span> <span class="p">{</span>
+    <span class="nv">$0</span><span class="o">.</span><span class="nf">dependencyForOperation</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">for</span> <span class="n">dependency</span> <span class="k">in</span> <span class="n">dependencies</span> <span class="p">{</span>
+    <span class="n">op</span><span class="o">.</span><span class="nf">addDependency</span><span class="p">(</span><span class="n">dependency</span><span class="p">)</span>
+
+    <span class="k">self</span><span class="o">.</span><span class="nf">addOperation</span><span class="p">(</span><span class="n">dependency</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<p>这个就很简单了，调用 <code class="highlighter-rouge">dependencyForOperation</code> 方法，拿到 operation，然后将当前的 op 依赖该 operation，同时将这个 operation 放到 queue 里，所以在 conditions 的 operations 执行完之前，op 是不会执行的。</p>
+
+<h5 id="处理-operation-的-dependencies-的排他性">处理 Operation 的 dependencies 的排他性</h5>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16</pre></td><td class="code"><pre><span class="k">let</span> <span class="nv">concurrencyCategories</span><span class="p">:</span> <span class="p">[</span><span class="kt">String</span><span class="p">]</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">conditions</span><span class="o">.</span><span class="n">flatMap</span> <span class="p">{</span> <span class="n">condition</span> <span class="k">in</span>
+    <span class="k">if</span> <span class="o">!</span><span class="n">condition</span><span class="o">.</span><span class="k">dynamicType</span><span class="o">.</span><span class="n">isMutuallyExclusive</span> <span class="p">{</span> <span class="k">return</span> <span class="kc">nil</span> <span class="p">}</span>
+
+    <span class="k">return</span> <span class="s">"</span><span class="se">\(</span><span class="n">condition</span><span class="o">.</span><span class="k">dynamicType</span><span class="se">)</span><span class="s">"</span>
+<span class="p">}</span>
+
+<span class="k">if</span> <span class="o">!</span><span class="n">concurrencyCategories</span><span class="o">.</span><span class="n">isEmpty</span> <span class="p">{</span>
+    <span class="c1">// Set up the mutual exclusivity dependencies.</span>
+    <span class="k">let</span> <span class="nv">exclusivityController</span> <span class="o">=</span> <span class="kt">ExclusivityController</span><span class="o">.</span><span class="n">sharedExclusivityController</span>
+
+    <span class="n">exclusivityController</span><span class="o">.</span><span class="nf">addOperation</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="nv">categories</span><span class="p">:</span> <span class="n">concurrencyCategories</span><span class="p">)</span>
+
+    <span class="n">op</span><span class="o">.</span><span class="nf">addObserver</span><span class="p">(</span><span class="kt">BlockObserver</span> <span class="p">{</span> <span class="n">operation</span><span class="p">,</span> <span class="n">_</span> <span class="k">in</span>
+        <span class="n">exclusivityController</span><span class="o">.</span><span class="nf">removeOperation</span><span class="p">(</span><span class="n">operation</span><span class="p">,</span> <span class="nv">categories</span><span class="p">:</span> <span class="n">concurrencyCategories</span><span class="p">)</span>
+    <span class="p">})</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<p>在这里可能看不出「排他」的实现，因为是在 <code class="highlighter-rouge">exclusivityController</code> 里面实现的，调用了它的 <code class="highlighter-rouge">addOperation</code> 方法后，它会去查看这个类型的数组是否为空，如果不为空，就让这个 operation 依赖数组的最后一个。这样在之前的 operation 执行完之前，这个 operation 是不会被执行的。</p>
+
+<h3 id="使用">使用</h3>
+
+<p>有了 Operation 和 OperationQueue 之后，就可以开始生产 megabot 了，来看一个「查看原网页」的 Operation，这个 Operation 的作用就是展示传入的 URL。</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41</pre></td><td class="code"><pre><span class="kd">import</span> <span class="kt">Foundation</span>
+<span class="kd">import</span> <span class="kt">SafariServices</span>
+
+<span class="c1">/// An `Operation` to display an `NSURL` in an app-modal `SFSafariViewController`.</span>
+<span class="kd">class</span> <span class="kt">MoreInformationOperation</span><span class="p">:</span> <span class="kt">Operation</span> <span class="p">{</span>
+
+    <span class="k">let</span> <span class="nv">URL</span><span class="p">:</span> <span class="kt">NSURL</span>
+
+    <span class="nf">init</span><span class="p">(</span><span class="kt">URL</span><span class="p">:</span> <span class="kt">NSURL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">self</span><span class="o">.</span><span class="kt">URL</span> <span class="o">=</span> <span class="kt">URL</span>
+        <span class="k">super</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+        <span class="c1">// 1</span>
+        <span class="nf">addCondition</span><span class="p">(</span><span class="kt">MutuallyExclusive</span><span class="o">&lt;</span><span class="kt">UIViewController</span><span class="o">&gt;</span><span class="p">())</span>
+    <span class="p">}</span>
+
+    <span class="k">override</span> <span class="kd">func</span> <span class="nf">execute</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nf">dispatch_async</span><span class="p">(</span><span class="nf">dispatch_get_main_queue</span><span class="p">())</span> <span class="p">{</span>
+            <span class="k">self</span><span class="o">.</span><span class="nf">showSafariViewController</span><span class="p">()</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">private</span> <span class="kd">func</span> <span class="nf">showSafariViewController</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="k">let</span> <span class="nv">context</span> <span class="o">=</span> <span class="kt">UIApplication</span><span class="o">.</span><span class="nf">sharedApplication</span><span class="p">()</span><span class="o">.</span><span class="n">keyWindow</span><span class="p">?</span><span class="o">.</span><span class="n">rootViewController</span> <span class="p">{</span>
+            <span class="k">let</span> <span class="nv">safari</span> <span class="o">=</span> <span class="kt">SFSafariViewController</span><span class="p">(</span><span class="kt">URL</span><span class="p">:</span> <span class="kt">URL</span><span class="p">,</span> <span class="nv">entersReaderIfAvailable</span><span class="p">:</span> <span class="kc">false</span><span class="p">)</span>
+            <span class="n">safari</span><span class="o">.</span><span class="n">delegate</span> <span class="o">=</span> <span class="k">self</span>
+            <span class="n">context</span><span class="o">.</span><span class="nf">presentViewController</span><span class="p">(</span><span class="n">safari</span><span class="p">,</span> <span class="nv">animated</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="nv">completion</span><span class="p">:</span> <span class="kc">nil</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="p">{</span>
+            <span class="nf">finish</span><span class="p">()</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">extension</span> <span class="kt">MoreInformationOperation</span><span class="p">:</span> <span class="kt">SFSafariViewControllerDelegate</span> <span class="p">{</span>
+    <span class="kd">func</span> <span class="nf">safariViewControllerDidFinish</span><span class="p">(</span><span class="nv">controller</span><span class="p">:</span> <span class="kt">SFSafariViewController</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">controller</span><span class="o">.</span><span class="nf">dismissViewControllerAnimated</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// 2</span>
+            <span class="k">self</span><span class="o">.</span><span class="nf">finish</span><span class="p">()</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<ol>
+  <li>因为这是一个 <code class="highlighter-rouge">ViewController</code> 相关的 Operation，所以其他同类型的 Operation，需要等我完成后才能被执行。</li>
+  <li>当这个 controller 被关闭时，表示这个 Operation 结束，调用一下 <code class="highlighter-rouge">finish</code> 方法。</li>
+</ol>
+
+<p>如果需要的话，可以给这个 Operation 再加一个 <code class="highlighter-rouge">ReachabilityCondition</code>，当没有网络时就不打开了。</p>
+
+<p>再来看看在 VC 层面的使用。</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27</pre></td><td class="code"><pre><span class="k">override</span> <span class="kd">func</span> <span class="nf">tableView</span><span class="p">(</span><span class="nv">tableView</span><span class="p">:</span> <span class="kt">UITableView</span><span class="p">,</span> <span class="n">didSelectRowAtIndexPath</span> <span class="nv">indexPath</span><span class="p">:</span> <span class="kt">NSIndexPath</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="c1">// 1</span>
+    <span class="k">let</span> <span class="nv">operation</span> <span class="o">=</span> <span class="kt">BlockOperation</span> <span class="p">{</span>
+        <span class="k">self</span><span class="o">.</span><span class="nf">performSegueWithIdentifier</span><span class="p">(</span><span class="s">"showEarthquake"</span><span class="p">,</span> <span class="nv">sender</span><span class="p">:</span> <span class="kc">nil</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="n">operation</span><span class="o">.</span><span class="nf">addCondition</span><span class="p">(</span><span class="kt">MutuallyExclusive</span><span class="o">&lt;</span><span class="kt">UIViewController</span><span class="o">&gt;</span><span class="p">())</span>
+
+    <span class="c1">// 2</span>
+    <span class="k">let</span> <span class="nv">blockObserver</span> <span class="o">=</span> <span class="kt">BlockObserver</span> <span class="p">{</span> <span class="n">_</span><span class="p">,</span> <span class="n">errors</span> <span class="k">in</span>
+        <span class="cm">/*
+            If the operation errored (ex: a condition failed) then the segue
+            isn't going to happen. We shouldn't leave the row selected.
+        */</span>
+        <span class="k">if</span> <span class="o">!</span><span class="n">errors</span><span class="o">.</span><span class="n">isEmpty</span> <span class="p">{</span>
+            <span class="nf">dispatch_async</span><span class="p">(</span><span class="nf">dispatch_get_main_queue</span><span class="p">())</span> <span class="p">{</span>
+                <span class="n">tableView</span><span class="o">.</span><span class="nf">deselectRowAtIndexPath</span><span class="p">(</span><span class="n">indexPath</span><span class="p">,</span> <span class="nv">animated</span><span class="p">:</span> <span class="kc">true</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="n">operation</span><span class="o">.</span><span class="nf">addObserver</span><span class="p">(</span><span class="n">blockObserver</span><span class="p">)</span>
+
+    <span class="c1">// 3</span>
+    <span class="n">operationQueue</span><span class="o">.</span><span class="nf">addOperation</span><span class="p">(</span><span class="n">operation</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<ol>
+  <li>类似 <code class="highlighter-rouge">NSBlockOperation</code>， <code class="highlighter-rouge">BlockOperation</code> 也可以快速生成一个 Operation。</li>
+  <li><code class="highlighter-rouge">BlockObserver</code> 也是一个快速生成 observer 的方法，这里描述了当 Operation 完成后的处理。</li>
+  <li>调用方需要新建一个 queue，然后把 Operation 放到这个 queue 里。</li>
+</ol>
+
+<p>相比起正常的调用，还是会多了些步骤。</p>
+
+<h3 id="小结">小结</h3>
+
+<p>基于 Operation 来架构的思想还是蛮新颖的，可以将复杂的任务拆分成粒度更细的 Operation，然后再组装。但实际使用起来也会有不少问题，比如之前提到的写起来会复杂些，调试时看 backtrace 会很累，不确定是否会带来更好的可维护性等等。不过既然苹果都已经把它用到了线上的 App，至少说明是可行的，至于与已有的架构相比会带来怎样的提升，可能需要实际写起来才知道。</p>
+
+					<br />
+					--EOF--
+					<p>若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+				</div>
+				<div id="disqus_thread"></div>
+				<script type="text/javascript">
+				  /**
+					* var disqus_identifier; [Optional but recommended: Define a unique identifier (e.g. post id or slug) for this thread]
+					*/
+				  (function() {
+				   var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				   dsq.src = 'http://lzyyblog.disqus.com/embed.js';
+				   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+				  })();
+				</script>
+				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript=lzyyblog">comments powered by Disqus.</a></noscript>
+			</div>
+			<div id="footer">
+	<p style="color:#ccc;font-size:12px;text-align: center">make the world a little better and easier</p>
+	<p style="clear:both"></p>
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1281124-24', 'limboy.me');
+  ga('send', 'pageview');
+
+</script>
+
+		</div>
+	</body>
+</html>

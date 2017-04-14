@@ -1,0 +1,274 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>YangShanghai's HQ</title>
+	<link rel="shortcut icon" href="/image/logo.png">
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+	<link rel="alternate" type="application/rss+xml" title="RSS" href="http://feeds.feedburner.com/lzyy">
+</head>
+
+	<body>
+		<div id="nav">
+	<div class="wrapper">
+		<div id="logo"><a href="/"><img src="/image/logo.png" /></a></h1></div>
+		<ul>
+			<li id="category-iOS"><a href="/category/iOS.html">iOS</a></li>
+			<li id="category-tech"><a href="/category/tech.html">技术</a></li>
+			<li id="category-essay"><a href="/category/essay.html">随笔</a></li>
+			<li id="category-reading"><a href="/category/reading.html">阅读</a></li>
+			<li id="category-design"><a href="/category/design.html">设计</a></li>
+			<li id="category-quotes"><a href="/quotes.html">引言</a></li>
+		</ul>
+	</div>
+</div>
+
+<script>
+var category = location.pathname;
+if (category == '/') {
+	document.getElementById('category-all').style.textDecoration = "underline";
+} else if (category == '/category/iOS.html') {
+	document.getElementById('category-iOS').style.textDecoration = "underline";
+} else if (category == '/category/tech.html') {
+	document.getElementById('category-tech').style.textDecoration = "underline";
+} else if (category == '/category/design.html') {
+	document.getElementById('category-design').style.textDecoration = "underline";
+} else if (category == '/category/essay.html') {
+	document.getElementById('category-essay').style.textDecoration = "underline";
+} else if (category == '/category/reading.html') {
+	document.getElementById('category-reading').style.textDecoration = "underline";
+} else if (category == '/quotes.html') {
+	document.getElementById('category-quotes').style.textDecoration = "underline";
+} else if (category == '/category/weekly-recommendation.html') {
+	document.getElementById('weekly-recommendation').style.textDecoration = "underline";
+}
+
+</script>
+
+		<div class="wrapper main">
+			<div id="content">
+				<h2>用php5.3的namespace实现类的无痛继承</h2>
+				<div class="cnt">
+					<p>标题有点怪异，先来说说正常的继承会有什么问题。假设你一个应用的Controller多次用到了View类，就像这样</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+
+<span class="k">class</span> <span class="nc">Controller_Hello</span>
+<span class="p">{</span>
+	<span class="k">public</span> <span class="k">function</span> <span class="nf">action_index</span><span class="p">()</span>
+	<span class="p">{</span>
+		<span class="c1">//...
+</span>		<span class="nv">$view</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">View</span><span class="p">(</span><span class="s1">'index.tpl'</span><span class="p">);</span>
+		<span class="nv">$view</span><span class="o">-&gt;</span><span class="na">render</span><span class="p">();</span>
+	<span class="p">}</span>
+
+	<span class="k">public</span> <span class="k">function</span> <span class="nf">action_edit</span><span class="p">(</span><span class="nv">$id</span><span class="err">）</span>
+	<span class="p">{</span>
+		<span class="c1">//...
+</span>		<span class="nv">$view</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">View</span><span class="p">(</span><span class="s1">'edit.tpl'</span><span class="p">);</span>
+		<span class="nv">$view</span><span class="o">-&gt;</span><span class="na">render</span><span class="p">();</span>
+	<span class="p">}</span>
+
+	<span class="c1">//...
+</span><span class="p">}</span></code></pre></figure>
+
+<p>这个View是框架提供的，假如某一天发现View类需要新添加一个方法，最常用的就是新建一个自定义的View类继承框架的View类</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+
+<span class="k">class</span> <span class="nc">My_View</span> <span class="k">extends</span> <span class="nx">View</span>
+<span class="p">{</span>
+	<span class="k">public</span> <span class="k">function</span> <span class="nf">newMethod</span><span class="p">()</span>
+	<span class="p">{</span>
+		<span class="c1">//...
+</span>	<span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>这时以前使用View类的地方就要全部变成My_View，这是比较恐怖的。很多框架也都提供了解决方法，大体有三种</p>
+
+<h3 id="eval">eval</h3>
+
+<p>这是Kohana2采用的方法，就是系统类命名为XXX_Core，然后调用的时候在autoload处，动态eval出一个XXX class，就像这样</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+<span class="c1">// system class
+</span><span class="k">class</span> <span class="nc">View_Core</span>
+<span class="p">{</span>
+	<span class="c1">//...
+</span><span class="p">}</span>
+
+<span class="c1">// autoload
+</span><span class="k">public</span> <span class="k">function</span> <span class="nf">autoload</span><span class="p">(</span><span class="nv">$class</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="c1">// first look into app dir
+</span>	<span class="c1">// then look into modules dir
+</span>	<span class="c1">// last look into system dir
+</span>	<span class="k">require</span> <span class="s1">'/path/to/'</span><span class="o">.</span><span class="nv">$class</span><span class="o">.</span><span class="s1">'.php'</span><span class="p">;</span>
+	<span class="k">eval</span><span class="p">(</span><span class="s1">'class '</span><span class="o">.</span><span class="nv">$class</span><span class="o">.</span><span class="s1">' extends '</span><span class="o">.</span><span class="nv">$class</span><span class="o">.</span><span class="s1">'_Core'</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>如果用户需要对该类添加新的方法，可以在app/classes里定义新的View类，同时继承View_Core类，这样使用时，因为优先级的原因，View类名可以保持不变</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+
+<span class="k">class</span> <span class="nc">View</span> <span class="k">extends</span> <span class="nx">View_Core</span>
+<span class="p">{</span>
+	<span class="k">public</span> <span class="k">function</span> <span class="nf">newMethod</span><span class="p">()</span>
+	<span class="p">{</span>
+		<span class="c1">//...
+</span>	<span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>因为使用了eval，所以不够优雅，而且有安全隐患</p>
+
+<h3 id="空壳法">空壳法</h3>
+
+<p>这是Kohana3的做法，具体如下</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+
+<span class="c1">// system/classes/view.php
+// 是的，就这么一句话
+</span><span class="k">class</span> <span class="nc">View</span> <span class="k">extends</span> <span class="nx">Kohana_View</span> <span class="p">{}</span>
+
+<span class="c1">// system/classes/kohana/view.php
+</span><span class="k">class</span> <span class="nc">Kohana_View</span>
+<span class="p">{</span>
+	<span class="c1">//...
+</span><span class="p">}</span></code></pre></figure>
+
+<p>根据优先级，最后会找到system/classes/view.php定义的View类。如果需要自己扩展Kohana_View类，可以在app/classes目录里新建一个view.php</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+
+<span class="k">class</span> <span class="nc">View</span> <span class="k">extends</span> <span class="nx">Kohana_View</span>
+<span class="p">{</span>
+	<span class="c1">// add your method
+</span><span class="p">}</span></code></pre></figure>
+
+<p>这样框架就会先找到app/classes/view.php而不是system/classes/view.php，自定义View类生效，同时原先使用的View类也不需要做调整</p>
+
+<p>这么做的缺点就是system/classes目录下会有大量的空壳类，有点累赘</p>
+
+<h3 id="attach-behavior">attach behavior</h3>
+
+<p>这是yii采用的方法，简单说来就是通过attachBehavior方法，动态地给某个类添加新的功能</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+
+<span class="k">class</span> <span class="nc">SomeComponent</span> <span class="k">extends</span> <span class="nx">Component</span>
+<span class="p">{</span>
+	<span class="c1">//...
+</span><span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">SomeBehavior</span> <span class="k">extends</span> <span class="nx">CBehavior</span>
+<span class="p">{</span>
+	<span class="k">public</span> <span class="k">function</span> <span class="nf">addWidth</span><span class="p">(</span><span class="nv">$width</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="nv">$this</span><span class="o">-&gt;</span><span class="na">Owner</span><span class="o">-&gt;</span><span class="na">width</span> <span class="o">+=</span> <span class="nv">$width</span><span class="p">;</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nv">$sc</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">SomeComponent</span><span class="p">();</span>
+<span class="nv">$sc</span><span class="o">-&gt;</span><span class="na">attachBehavior</span><span class="p">(</span><span class="s1">'sb'</span><span class="p">,</span> <span class="s1">'SomeBehavior'</span><span class="p">);</span>
+<span class="nv">$sc</span><span class="o">-&gt;</span><span class="na">addWidth</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span></code></pre></figure>
+
+<p>需要实例化后动态调用attachBehavior方法，有点麻烦。而且不能使用父类的protected属性和方法。</p>
+
+<h3 id="用namespace实现无痛继承">用namespace实现无痛继承</h3>
+
+<p>所谓的无痛继承就是不用修改原先的类名，没有多余的空壳类，没有eval，不用attachBehavior，只要修改’use’就行了。代码如下</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+
+<span class="c1">// app/lib1.php
+</span><span class="k">namespace</span> <span class="nx">App\Lib1</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">Controller</span>
+<span class="p">{</span>
+	<span class="k">public</span> <span class="k">function</span> <span class="nf">before</span><span class="p">()</span>
+	<span class="p">{</span>
+		<span class="k">echo</span> <span class="s1">'lib1\'s before'</span><span class="p">;</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>定义了一个Controller类，使用时：</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+
+<span class="k">require</span> <span class="s1">'lib/lib1.php'</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">App\Lib1\Controller</span><span class="p">;</span>
+
+<span class="nv">$c</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Controller</span><span class="p">();</span>
+<span class="nv">$c</span><span class="o">-&gt;</span><span class="na">before</span><span class="p">();</span>
+
+<span class="o">//</span> <span class="nx">output</span><span class="o">:</span> <span class="nx">lib1</span><span class="err">'</span><span class="nx">s</span> <span class="nx">before</span></code></pre></figure>
+
+<p>现在要有一个新的controller继承lib1.php的Controller，如下</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+
+<span class="k">namespace</span> <span class="nx">App\Lib2</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Lib1</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">Controller</span> <span class="k">extends</span> <span class="nx">Lib1\Controller</span>
+<span class="p">{</span>
+	<span class="k">public</span> <span class="k">function</span> <span class="nf">before</span><span class="p">()</span>
+	<span class="p">{</span>
+		<span class="k">echo</span> <span class="s1">'lib2\'s before'</span><span class="p">;</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>使用时，只要将 use App\Lib1\Controller 改为 use App\Lib2\Controller 就行了</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+<span class="c1">// 可以通过设置autoload来解决require的问题
+</span><span class="k">require</span> <span class="s1">'lib/lib1.php'</span><span class="p">;</span>
+<span class="k">require</span> <span class="s1">'lib/lib2.php'</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">App\Lib2\Controller</span><span class="p">;</span>
+
+<span class="nv">$c</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Controller</span><span class="p">();</span>
+<span class="nv">$c</span><span class="o">-&gt;</span><span class="na">before</span><span class="p">();</span></code></pre></figure>
+
+<p>是不是很方便</p>
+
+
+					<br />
+					--EOF--
+					<p>若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+				</div>
+				<div id="disqus_thread"></div>
+				<script type="text/javascript">
+				  /**
+					* var disqus_identifier; [Optional but recommended: Define a unique identifier (e.g. post id or slug) for this thread]
+					*/
+				  (function() {
+				   var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				   dsq.src = 'http://lzyyblog.disqus.com/embed.js';
+				   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+				  })();
+				</script>
+				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript=lzyyblog">comments powered by Disqus.</a></noscript>
+			</div>
+			<div id="footer">
+	<p style="color:#ccc;font-size:12px;text-align: center">make the world a little better and easier</p>
+	<p style="clear:both"></p>
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1281124-24', 'limboy.me');
+  ga('send', 'pageview');
+
+</script>
+
+		</div>
+	</body>
+</html>

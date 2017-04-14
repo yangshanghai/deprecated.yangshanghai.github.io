@@ -1,0 +1,255 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>YangShanghai's HQ</title>
+	<link rel="shortcut icon" href="/image/logo.png">
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+	<link rel="alternate" type="application/rss+xml" title="RSS" href="http://feeds.feedburner.com/lzyy">
+</head>
+
+	<body>
+		<div id="nav">
+	<div class="wrapper">
+		<div id="logo"><a href="/"><img src="/image/logo.png" /></a></h1></div>
+		<ul>
+			<li id="category-iOS"><a href="/category/iOS.html">iOS</a></li>
+			<li id="category-tech"><a href="/category/tech.html">技术</a></li>
+			<li id="category-essay"><a href="/category/essay.html">随笔</a></li>
+			<li id="category-reading"><a href="/category/reading.html">阅读</a></li>
+			<li id="category-design"><a href="/category/design.html">设计</a></li>
+			<li id="category-quotes"><a href="/quotes.html">引言</a></li>
+		</ul>
+	</div>
+</div>
+
+<script>
+var category = location.pathname;
+if (category == '/') {
+	document.getElementById('category-all').style.textDecoration = "underline";
+} else if (category == '/category/iOS.html') {
+	document.getElementById('category-iOS').style.textDecoration = "underline";
+} else if (category == '/category/tech.html') {
+	document.getElementById('category-tech').style.textDecoration = "underline";
+} else if (category == '/category/design.html') {
+	document.getElementById('category-design').style.textDecoration = "underline";
+} else if (category == '/category/essay.html') {
+	document.getElementById('category-essay').style.textDecoration = "underline";
+} else if (category == '/category/reading.html') {
+	document.getElementById('category-reading').style.textDecoration = "underline";
+} else if (category == '/quotes.html') {
+	document.getElementById('category-quotes').style.textDecoration = "underline";
+} else if (category == '/category/weekly-recommendation.html') {
+	document.getElementById('weekly-recommendation').style.textDecoration = "underline";
+}
+
+</script>
+
+		<div class="wrapper main">
+			<div id="content">
+				<h2>说说REST</h2>
+				<div class="cnt">
+					<p>p(date). 2010-11-14</p>
+
+<h3 id="rest究竟是什么东东">REST究竟是什么东东</h3>
+
+<p>REST(Representational State Transfer)是Roy Fielding在他的博士论文中提出来的。他也是HTTP协议的制定者之一。REST是一种针对网络应用的设计和开发方式，可以降低开发的复杂性，提高系统的可伸缩性。</p>
+
+<h3 id="rest的特性">REST的特性</h3>
+
+<h3 id="cs架构">C/S架构</h3>
+
+<p>客户端主动向服务端发起请求，服务端收到请求后，返回格式化的结果。</p>
+
+<h3 id="无状态">无状态</h3>
+
+<p>每个请求必须包含服务端所需的所有信息，不要指望从服务端”借”点数据。</p>
+
+<h3 id="易扩展">易扩展</h3>
+
+<p>如果因为业务需要，要新添加几个资源，可以横向扩展，而不需要改变原来的结构。</p>
+
+<h3 id="统一请求类型">统一请求类型</h3>
+
+<p>GET/POST/PUT/DELETE，实际中以GET和POST用的最多。</p>
+
+<h3 id="资源">资源</h3>
+
+<p>服务端要提供资源供客户端调用，每个资源都有独立的URL。</p>
+
+<h3 id="轻量级">轻量级</h3>
+
+<p>使用标准的http请求，各个语言几乎都支持，所以由丰富的客户端。</p>
+
+<h3 id="方便添加中间层">方便添加中间层</h3>
+
+<p>如代理/集群/缓存等等，对客户端而言它们是透明的。</p>
+
+<h3 id="方便测试">方便测试</h3>
+
+<p>不牵扯具体的业务逻辑，而且格式化的数据很容易解析</p>
+
+<h3 id="demo">DEMO</h3>
+
+<table>
+  <tbody>
+    <tr>
+      <td>以twitter为例(请自动切换到翻</td>
+      <td>墙模式)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="获取信息get">获取信息(GET)</h3>
+
+<p>如果要获得某条tweet的信息，直接访问api即可，如 http://api.twitter.com/1/statuses/show/3657615682838528.json，将会返回如下结果</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console">{
+    place: null
+    geo: null
+    // ...
+    created_at: "Sun Nov 14 03:56:58 +0000 2010"
+    in_reply_to_status_id_str: null
+    
+    user: {
+        profile_image_url: http://a2.twimg.com/profile_images/259632038/DuanziLogoBig_normal.jpg
+        // ...
+        description: "官网：www.JokeCook.com | When that happens.当下那些事儿 | 欢迎回复@duanzi 投稿。"
+    }
+    truncated: false
+    id: 3657615682838528
+    in_reply_to_user_id_str: null
+    text: "Via @ruoxiaosu: 有时候吧，取消对一个人的关注，...via琦殿"
+<span class="err">}</span></code></pre></figure>
+
+<p>省略了部分结果，可以看到是一个包含了很多信息的json，想怎样展现那就是客户端的事情了。</p>
+
+<h3 id="提交信息post">提交信息(POST)</h3>
+
+<p>这个就要复杂一点了，因为涉及到用户验证，前面说过了，REST是无状态的。也就是说，服务端不知道你到底有没有登录，除非出示证件。是的，每次请求都得出示。服务端验证通过后，查询到用户id，保存POST数据，返回提交结果。</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console">POST /1/statuses/update.json
+HOST api.twitter.com
+
+<span class="err">status=blahblah...&amp;oauth_consumer_key=GDdmIQH6jhtm...&amp;oauth_nonce=oElnnMTQIZvqvlfXM56aB...</span></code></pre></figure>
+
+<p>可以看到除了status，还有oauth_consumer_key和oauth_nonce(还有其他oauth相关的参数)，这些就是用来进行身份验证的，如果验证通过了，tweet就会被正常发布，同时返回该tweet的相关信息。</p>
+
+<p>顺便说说用户验证，一般有三种验证方式：Basic Auth/Digest Auth/OAuth(XAuth)，就安全性来说OAuth是最高的，用户无须输入密码，但部署起来难度也最大。Basic Auth安全性最低，部署起来也最方便，用户只需提供用户名和密码即可，但如果第三方记录了这些信息，那就… Digest Auth的安全性和部署成本介于两者之间。</p>
+
+<p>其他更新内容和删除内容也类似，都是先进行用户验证，再进行权限验证，最后返回执行结果。</p>
+
+<h3 id="rest的原则">REST的原则</h3>
+
+<h3 id="抽象出所有可供调用的资源越精确越好">抽象出所有可供调用的资源，越精确越好</h3>
+
+<p>如果一个事物可以抽象成资源，那它就是RESTful，可以通过URL进行调用。</p>
+
+<h3 id="为每个资源提供一个url且资源应该是名词而不是动词">为每个资源提供一个URL，且资源应该是名词而不是动词</h3>
+
+<p>如，下面这个url是不建议采用的</p>
+
+<p>bq. http://www.twitter.com/getUser/10</p>
+
+<p>应该改为这样</p>
+
+<p>bq. http://www.twitter.com/user/10</p>
+
+<h3 id="将资源分类">将资源分类</h3>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console">Tweets resources
+	- status/show/:id
+	- status/update
+	- status/destroy/:id
+	- ...
+Timeline resources
+	- status/public_timeline
+	...
+User resources
+<span class="err">...</span></code></pre></figure>
+
+<h3 id="所有get请求都不应该影响数据库内容">所有GET请求都不应该影响数据库内容</h3>
+
+<p>GET顾名思义，就是用来获取某个资源，如果要修改，则应该执行POST/PUT/DELETE。千万不要因为偷懒，而给GET留下后门。</p>
+
+<h3 id="返回结果不一定是单独的内容可以包含相关链接">返回结果不一定是单独的内容，可以包含相关链接</h3>
+
+<p>有时候，这是一种双输的局面：用户不想要那么多的数据，服务端又多了不必要的运算。只要包含可以获取信息的链接即可。</p>
+
+<h3 id="明确返回格式">明确返回格式</h3>
+
+<p>如json/xml/html等等，不过目前来看json基本是主流。</p>
+
+<h3 id="如何使用rest">如何使用REST</h3>
+
+<p>REST不仅仅是一种崭新的架构，它带来的更是一种全新的Web开发过程中的思维方式：通过URL来设计系统结构。在REST中，所有的URL都对应着资源，只要URL的设计是良好的，那么其呈现的系统结构也就是良好的。这点和TDD (Test Driven Development)很相似，他是通过测试用例来设计系统的接口，每一个测试用例都表示一系列用户的需求。开发人员不应该一开始就编写功能，而是先细分资源。对资源抽象地越精确，对REST的应用来说就更好，这个和传统的MVC中基于Action的思想差别很大。设计良好的URL， 不但对于开发人员来说可以更明确的认识系统结构，对使用者来说也方便记忆和识别资源，因为URL足够简单和有意义。</p>
+
+<p>REST对开发者友好。Amazon和Ebay的service结果显示：60%的用户使用REST。提供REST服务，开发者可以很容易通过各种语言各种平台来开发一个app，手机/ipad/网站/cli等等，这也是web2.0的一大特征，想想如果flickr/twitter/delicious没有开放简洁易用的api，其火爆程度肯定大打折扣。</p>
+
+<p>使用REST还有一个好处是，可以避免Controller直接操作数据。假如是MVC模式，Controller很可能途省事，直接把ORM拿过来就开始进行数据操作了，如</p>
+
+<figure class="highlight"><pre><code class="language-php" data-lang="php"><span class="cp">&lt;?php</span>
+<span class="k">class</span> <span class="nc">Controller_Post</span> <span class="k">extends</span> <span class="nx">Controller</span> <span class="p">{</span>
+	<span class="k">public</span> <span class="k">function</span> <span class="nf">actionAdd</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="p">(</span><span class="nx">Validate</span><span class="o">::</span><span class="na">check</span><span class="p">(</span><span class="nv">$_POST</span><span class="p">))</span> <span class="p">{</span>
+			<span class="nv">$post</span> <span class="o">=</span> <span class="nx">ORM</span><span class="o">::</span><span class="na">factory</span><span class="p">(</span><span class="s1">'post'</span><span class="p">);</span>
+			<span class="nv">$post</span><span class="o">-&gt;</span><span class="na">title</span> <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'title'</span><span class="p">];</span>
+			<span class="nv">$post</span><span class="o">-&gt;</span><span class="na">content</span> <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'content'</span><span class="p">];</span>
+			<span class="c1">//...
+</span>			<span class="nv">$post</span><span class="o">-&gt;</span><span class="na">save</span><span class="p">();</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>如果有一天保存的操作改了，如加了一个status字段，那就很糟糕了。</p>
+
+<p>实际使用中，可能会发现不是所有的需求都可以抽象为资源，这时可以混用MVC/MVVM。尽可能地抽象成资源，对其他需求使用MVC/MVVM开发。</p>
+
+<p>目前已经有<a href="http://en.wikipedia.org/wiki/Representational_State_Transfer">不少</a>基于/支持REST的框架，有兴趣的话不妨尝试一下。也可以看一下<a href="http://www.peej.co.uk/articles/rmr-architecture.html">这篇文章</a></p>
+
+<h3 id="总结">总结</h3>
+
+<ul>
+  <li>REST和MVC的关系就好像Div和Table的关系。在web标准没推广前，都是使用Table布局，Table原本是用来做数据展示的，不知是哪一位天才发现对Table进行各种改造后，可以用作前端展示，于是就这么流传开了。</li>
+  <li>REST是一种架构风格，不是标准。但使用了很多标准：http/url/mime等等。</li>
+  <li>REST概念从提出到现在已经有10年了，越来越趋于成熟。它是为http而生的，而MVC最开始是用来开发桌面软件的。</li>
+  <li>如果你的网站有提供API的打算，推荐使用REST架构，开始可能会麻烦一点，但将来会发现这些付出是值得的。</li>
+</ul>
+
+					<br />
+					--EOF--
+					<p>若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+				</div>
+				<div id="disqus_thread"></div>
+				<script type="text/javascript">
+				  /**
+					* var disqus_identifier; [Optional but recommended: Define a unique identifier (e.g. post id or slug) for this thread]
+					*/
+				  (function() {
+				   var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				   dsq.src = 'http://lzyyblog.disqus.com/embed.js';
+				   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+				  })();
+				</script>
+				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript=lzyyblog">comments powered by Disqus.</a></noscript>
+			</div>
+			<div id="footer">
+	<p style="color:#ccc;font-size:12px;text-align: center">make the world a little better and easier</p>
+	<p style="clear:both"></p>
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1281124-24', 'limboy.me');
+  ga('send', 'pageview');
+
+</script>
+
+		</div>
+	</body>
+</html>

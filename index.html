@@ -1,20 +1,40 @@
----
-layout: default
----
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>YSH's BLOG</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="images/favicon.png">
+    <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,400" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="application.css">
+  </head>
+  <body>
+    <div class="outer-container">
+      <div class="inner-container">
+        <img src="images/pug_1x.png" srcset="images/pug_2x.png 2x, images/pug_3x.png 3x" alt="" class="the-pug">
 
-<div class="main-post-list hidden">
+        <p>I'm <b>Shanghai Yang</b>, a iOS developer.</p>
 
-  <ol class="post-list">
-    {% for post in paginator.posts %}
-    <li>
-      <h2 class="post-list__post-title post-title"><a href="{{ post.url }}" title="访问 {{ post.title }}">{{ post.title }}</a></h2>
-      <p class="excerpt">{{ post.content | strip_html | strip_newlines | truncate: 250 }}&hellip;</p>
-      <div class="post-list__meta"><time datetime="{{post.date | date: date_to_xmlschema}}" class="post-list__meta--date date">{{ post.date | date: "%F"}}</time> &#8226; <span class="post-list__meta--tags tags">{{ post.tags }}</span><a class="btn-border-small" href={{ post.url }}>继续阅读</a></div>
-      <hr class="post-list__divider" />
-    </li>
-    {% endfor %}
-  </ol>
+        <p>I blog at <a href="blog_index.html">The YSH's BLOG</a>.</p>
 
-  {% include pagination.html %}
+        <p>
+          I live with <a>my Family</a> in Shenzhen, China.
+          I <a>work</a> at <a href="http://www.tcl.com/group/companyInfo/index">TCL</a>.
+        </p>
 
-</div>
+        <p>
+          Contact me at <a href="https://twitter.com/syang1990"><span class="at">@</span>syang1990</a>
+          or
+          <a href="mailto:shanghai.yang2013@gmail.com">shanghai.yang2013<span class="at">@</span>gmail.com</a>.
+        </p>
+
+        <ul class="elsewhere">
+          <li class="elsewhere__item"><a href="https://github.com/yangshanghai">GitHub</a></li>
+          <li class="elsewhere__item"><a href="">Instagram</a></li>
+          <li class="elsewhere__item"><a href="">Pinboard</a></li>
+          <li class="elsewhere__item"><a href="">Projects</a></li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

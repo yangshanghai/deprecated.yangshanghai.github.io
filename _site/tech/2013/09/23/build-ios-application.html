@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>YangShanghai's HQ</title>
+	<link rel="shortcut icon" href="/image/logo.png">
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+	<link rel="alternate" type="application/rss+xml" title="RSS" href="http://feeds.feedburner.com/lzyy">
+</head>
+
+	<body>
+		<div id="nav">
+	<div class="wrapper">
+		<div id="logo"><a href="/"><img src="/image/logo.png" /></a></h1></div>
+		<ul>
+			<li id="category-iOS"><a href="/category/iOS.html">iOS</a></li>
+			<li id="category-tech"><a href="/category/tech.html">技术</a></li>
+			<li id="category-essay"><a href="/category/essay.html">随笔</a></li>
+			<li id="category-reading"><a href="/category/reading.html">阅读</a></li>
+			<li id="category-design"><a href="/category/design.html">设计</a></li>
+			<li id="category-quotes"><a href="/quotes.html">引言</a></li>
+		</ul>
+	</div>
+</div>
+
+<script>
+var category = location.pathname;
+if (category == '/') {
+	document.getElementById('category-all').style.textDecoration = "underline";
+} else if (category == '/category/iOS.html') {
+	document.getElementById('category-iOS').style.textDecoration = "underline";
+} else if (category == '/category/tech.html') {
+	document.getElementById('category-tech').style.textDecoration = "underline";
+} else if (category == '/category/design.html') {
+	document.getElementById('category-design').style.textDecoration = "underline";
+} else if (category == '/category/essay.html') {
+	document.getElementById('category-essay').style.textDecoration = "underline";
+} else if (category == '/category/reading.html') {
+	document.getElementById('category-reading').style.textDecoration = "underline";
+} else if (category == '/quotes.html') {
+	document.getElementById('category-quotes').style.textDecoration = "underline";
+} else if (category == '/category/weekly-recommendation.html') {
+	document.getElementById('weekly-recommendation').style.textDecoration = "underline";
+}
+
+</script>
+
+		<div class="wrapper main">
+			<div id="content">
+				<h2>iOS项目的目录结构和开发流程</h2>
+				<div class="cnt">
+					<p>网上相关的资源不多，开源的且质量还不错的iOS项目也是少之又少，最近正好跟同事合作了一个iOS项目，来说说自己的一些想法。</p>
+
+<h2 id="目录结构">目录结构</h2>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">AppDelegate</span>
+<span class="n">Models</span>
+<span class="n">Macro</span>
+<span class="n">General</span>
+<span class="n">Helpers</span>
+<span class="n">Vendors</span>
+<span class="n">Sections</span>
+<span class="n">Resources</span></code></pre></figure>
+
+<p>一个合理的目录结构首先应该是清晰的，让人一眼看上去就能大概了解目录的职责，且容易应对新的变化。</p>
+
+<h3 id="appdelegate">AppDelegate</h3>
+<p>这个目录下放的是AppDelegate.h(.m)文件，是整个应用的入口文件，所以单独拿出来。</p>
+
+<h3 id="models">Models</h3>
+<p>这个目录下放一些与数据相关的Model文件，里面大概是这样：</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">Models</span>
+	<span class="o">|-</span> <span class="n">BaseModel</span><span class="p">.</span><span class="n">h</span>
+	<span class="o">|-</span> <span class="n">BaseModel</span><span class="p">.</span><span class="n">m</span>
+	<span class="o">|-</span> <span class="n">CollectionModel</span><span class="p">.</span><span class="n">h</span>
+	<span class="o">|-</span> <span class="n">CollectionModel</span><span class="p">.</span><span class="n">m</span>
+	<span class="p">...</span></code></pre></figure>
+
+<h3 id="macro">Macro</h3>
+<p>这个目录下放了整个应用会用到的宏定义，里面大概是这样：</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">Macro</span>
+	<span class="o">|-</span> <span class="n">AppMacro</span><span class="p">.</span><span class="n">h</span>
+	<span class="o">|-</span> <span class="n">NotificationMacro</span><span class="p">.</span><span class="n">h</span>
+	<span class="o">|-</span> <span class="n">VendorMacro</span><span class="p">.</span><span class="n">h</span>
+	<span class="o">|-</span> <span class="n">UtilsMacro</span><span class="p">.</span><span class="n">h</span>
+	<span class="p">...</span></code></pre></figure>
+
+<h4 id="appmacroh-里放app相关的宏定义如">AppMacro.h 里放app相关的宏定义，如:</h4>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="c1">// 表情相关
+</span><span class="cp">#define EMOTION_CACHE_PATH @"cachedemotions"
+#define EMOTION_RECENT_USED @"recentusedemotions"
+#define EMOTION_CATEGORIES @"categoryemotions"
+#define EMOTION_TOPICS @"emotiontopics"
+</span>
+<span class="c1">// 收藏相关
+</span><span class="cp">#define COLLECT_CACHE_PATH @"collected"
+</span>
+<span class="c1">// 配图相关
+</span><span class="cp">#define WATERFALL_ITEM_HEIGHT_MAX 300
+#define WATERFALL_ITEM_WIDTH 146</span></code></pre></figure>
+
+<h4 id="notificationmacroh-里放的是通知相关的宏定义">NotificationMacro.h 里放的是通知相关的宏定义。</h4>
+
+<h4 id="utilsmacroh-里放的是一些方便使用的宏定义如">UtilsMacro.h 里放的是一些方便使用的宏定义，如：</h4>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="cp">#define UIColorFromRGB(r,g,b) [UIColor \
+colorWithRed:r/255.0 \
+green:g/255.0 \
+blue:b/255.0 alpha:1]
+</span>
+<span class="cp">#define NSStringFromInt(intValue) [NSString stringWithFormat:@"%d",intValue]</span></code></pre></figure>
+
+<h4 id="vendormacroh-里放一些第三方常量如">VendorMacro.h 里放一些第三方常量，如：</h4>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="cp">#define UMENG_KEY @"xxxxx"
+#define UMENG_CHANNEL_ID @"xxx"</span></code></pre></figure>
+
+<p>如果有新的类型的宏定义，可以再新建一个相关的Macro.h。</p>
+
+<h3 id="general">General</h3>
+
+<p>这个目录放会被重用的Views/Classes和Categories。里面大概是这样：</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">General</span>
+	<span class="o">|-</span> <span class="n">Views</span>
+		<span class="o">|-</span> <span class="n">TPKScollView</span>
+		<span class="o">|-</span> <span class="n">TPKPullToRefresh</span>
+		<span class="p">...</span>
+	<span class="o">|-</span> <span class="n">Classes</span>
+		<span class="o">|-</span> <span class="n">TPKBaseViewController</span>
+		<span class="o">|-</span> <span class="n">TPKHorizontalView</span>
+		<span class="p">...</span>
+	<span class="o">|</span> <span class="o">-</span> <span class="n">Categories</span>
+		<span class="o">|-</span> <span class="n">UIViewController</span><span class="o">+</span><span class="n">Sizzle</span>
+		<span class="o">|-</span> <span class="n">UIImageView</span><span class="o">+</span><span class="n">Downloader</span>
+		<span class="p">...</span></code></pre></figure>
+
+<p>这里的<code class="highlighter-rouge">TPK</code>是项目的首字母缩写。</p>
+
+<h3 id="helpers">Helpers</h3>
+
+<p>这个目录放一些助手类，文件名与功能挂钩。里面大概是这样：</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">Helpers</span>
+	<span class="o">|-</span> <span class="n">TPKShareHelper</span>
+	<span class="o">|-</span> <span class="n">TPDBHelper</span>
+	<span class="o">|-</span> <span class="n">TPKEmotionHelper</span>
+	<span class="p">...</span></code></pre></figure>
+
+<p>助手类的主要作用是帮助Controller瘦身，也可以提供一定程度的复用。</p>
+
+<h3 id="vendors">Vendors</h3>
+
+<p>这个目录放第三方的类库/SDK，如UMeng、WeiboSDK、WeixinSDK等等。</p>
+
+<h3 id="sections">Sections</h3>
+
+<p>这个目录下面的文件对应的是app的具体单元，如导航、瀑布流等等。里面大概是这样：</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">Sections</span>
+	<span class="o">|-</span> <span class="n">Menu</span>
+	<span class="o">|-</span> <span class="n">Setting</span>
+	<span class="o">|-</span> <span class="n">Collection</span>
+	<span class="p">...</span></code></pre></figure>
+
+<h3 id="resources">Resources</h3>
+
+<p>这个目录下放的是app会用到的一些资源，主要是图片。</p>
+
+<h2 id="cocoapods">Cocoapods</h2>
+
+<p>业务无关的类库可以通过 Cocoapods 来方便地管理，如<code class="highlighter-rouge">SDWebImage</code>, <code class="highlighter-rouge">Reachability</code>等等。还有一些是多个应用都会用到的基础模块，比如HBAPI、HBSNS 、HBFoundation（HB为公司名首字母）等等，可以建一个私有的git repo，然后加到podfile中，这样如果HBAPI有更新，只需要<code class="highlighter-rouge">pod update</code>一下就行了。</p>
+
+<p>顺便说一下<code class="highlighter-rouge">HBFoundation</code>，这个git仓库中可以放一些自己写的所有应用基本上都会用到的小模块。如很多app都会有隔一段时间跳出一个求好评的alertView，就可以写一个<code class="highlighter-rouge">HBRating</code>类，这样需要使用该功能的app只需加上一句：<code class="highlighter-rouge">[HBRating checkIfShouldPopupWithAppID:(NSInteger)appID]</code>就行了。又比如app都有接受push notification的需求，可以写一个<code class="highlighter-rouge">HBAPNS</code>类，等等。</p>
+
+<h2 id="开发流程">开发流程</h2>
+
+<p>在拿到设计图后，就可以针对设计图抽离出可复用的Classes/Views/Helpers，考虑一下某个效果的具体实现，使用合适的设计模式来避免大量的if/else嵌套，等等。不要一下子就钻到Sections中去实现页面效果和功能，初看起来可能会快一点，但只要有点复杂度的项目，这种做法到后来只会吃尽苦头，代码会变的越来越难维护。所以前期一定要做好充足的准备工作。</p>
+
+<p>经验有限，如果你有更好的想法，欢迎交流：）</p>
+
+					<br />
+					--EOF--
+					<p>若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+				</div>
+				<div id="disqus_thread"></div>
+				<script type="text/javascript">
+				  /**
+					* var disqus_identifier; [Optional but recommended: Define a unique identifier (e.g. post id or slug) for this thread]
+					*/
+				  (function() {
+				   var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				   dsq.src = 'http://lzyyblog.disqus.com/embed.js';
+				   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+				  })();
+				</script>
+				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript=lzyyblog">comments powered by Disqus.</a></noscript>
+			</div>
+			<div id="footer">
+	<p style="color:#ccc;font-size:12px;text-align: center">make the world a little better and easier</p>
+	<p style="clear:both"></p>
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1281124-24', 'limboy.me');
+  ga('send', 'pageview');
+
+</script>
+
+		</div>
+	</body>
+</html>

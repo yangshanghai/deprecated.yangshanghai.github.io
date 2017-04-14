@@ -1,0 +1,181 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>YangShanghai's HQ</title>
+	<link rel="shortcut icon" href="/image/logo.png">
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+	<link rel="alternate" type="application/rss+xml" title="RSS" href="http://feeds.feedburner.com/lzyy">
+</head>
+
+	<body>
+		<div id="nav">
+	<div class="wrapper">
+		<div id="logo"><a href="/"><img src="/image/logo.png" /></a></h1></div>
+		<ul>
+			<li id="category-iOS"><a href="/category/iOS.html">iOS</a></li>
+			<li id="category-tech"><a href="/category/tech.html">技术</a></li>
+			<li id="category-essay"><a href="/category/essay.html">随笔</a></li>
+			<li id="category-reading"><a href="/category/reading.html">阅读</a></li>
+			<li id="category-design"><a href="/category/design.html">设计</a></li>
+			<li id="category-quotes"><a href="/quotes.html">引言</a></li>
+		</ul>
+	</div>
+</div>
+
+<script>
+var category = location.pathname;
+if (category == '/') {
+	document.getElementById('category-all').style.textDecoration = "underline";
+} else if (category == '/category/iOS.html') {
+	document.getElementById('category-iOS').style.textDecoration = "underline";
+} else if (category == '/category/tech.html') {
+	document.getElementById('category-tech').style.textDecoration = "underline";
+} else if (category == '/category/design.html') {
+	document.getElementById('category-design').style.textDecoration = "underline";
+} else if (category == '/category/essay.html') {
+	document.getElementById('category-essay').style.textDecoration = "underline";
+} else if (category == '/category/reading.html') {
+	document.getElementById('category-reading').style.textDecoration = "underline";
+} else if (category == '/quotes.html') {
+	document.getElementById('category-quotes').style.textDecoration = "underline";
+} else if (category == '/category/weekly-recommendation.html') {
+	document.getElementById('weekly-recommendation').style.textDecoration = "underline";
+}
+
+</script>
+
+		<div class="wrapper main">
+			<div id="content">
+				<h2>inotify-rsync实时同步脚本</h2>
+				<div class="cnt">
+					<h3 id="为什么要写这个脚本">为什么要写这个脚本</h3>
+
+<p>rsync是linux下一款非常强大的同步工具，采用差异同步的方法，只上传文件/文件夹的不同部分，同时可以对上传部分先进行压缩，所以rsync的传输效率是很高的。</p>
+
+<p>但rsync也有缺点，最大的问题就是每次执行rsync命令都会遍历目标目录，当文件不多时，这没什么问题，一旦文件数到了一定规模，那么每次遍历都会消耗很多资源。但事实上改动的文件并不多，如果可以只sync改动的文件，问题就迎刃而解了。</p>
+
+<p>这时就得请出本文的另一个主角：inotify。inotify是一种文件系统的变化通知机制，如文件增加、删除等事件可以立刻让用户态得知。要使用inotify，linux的内核版本不能低于2.6.13</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="gp">~$ </span>uname -a
+Linux lzyy-laptop 2.6.32-26-generic <span class="c">#48-Ubuntu SMP Wed Nov 24 09:00:03 UTC 2010 i686 GNU/Linux</span></code></pre></figure>
+
+<p>但inotify只提供了C语言接口，不方便调用，所以我们需要先安装<a href="https://github.com/rvoicilas/inotify-tools/wiki/">inotify-tools</a>，大多数的linux发行版应该都可以直接通过apt-get或yum来安装。</p>
+
+<h3 id="脚本说明与使用">脚本说明与使用</h3>
+
+<p>其实<a href="http://blog.chinaunix.net/u/32831/showart_1289758.html">前人</a>已经做了类似的工作，不过有些地方尚未完善(如删除文件的同步)，于是我改进和简化了一下。</p>
+
+<h3 id="服务端">服务端</h3>
+
+<p>以下是服务端脚本，运行这段脚本后，这个机器上对应的文件夹将会同步到其他机器上</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#!/bin/bash</span>
+
+<span class="c">###########################</span>
+<span class="c"># 在这里配置本地文件夹,目标host,目标的rsync_module。rsync_module在同步机器的/etc/rsyncd.conf文件中配置</span>
+<span class="c"># 逗号前后不要有空格</span>
+sync[0]<span class="o">=</span><span class="s1">'/path/to/local/dir,1.2.3.4,test'</span> <span class="c"># localdir,host,rsync_module</span>
+<span class="c"># sync[1]='/path/to/local/dir,host,rsync_module'</span>
+<span class="c">###########################</span>
+
+<span class="k">for </span>item <span class="k">in</span> <span class="k">${</span><span class="nv">sync</span><span class="p">[@]</span><span class="k">}</span>; <span class="k">do
+
+</span><span class="nv">dir</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$item</span> | awk -F<span class="s2">","</span> <span class="s1">'{print $1}'</span><span class="sb">`</span>
+<span class="nv">host</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$item</span> | awk -F<span class="s2">","</span> <span class="s1">'{print $2}'</span><span class="sb">`</span>
+<span class="nv">module</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$item</span> | awk -F<span class="s2">","</span> <span class="s1">'{print $3}'</span><span class="sb">`</span>
+
+inotifywait -mrq --timefmt <span class="s1">'%d/%m/%y %H:%M'</span> --format  <span class="s1">'%T %w%f %e'</span> <span class="se">\</span>
+ --event CLOSE_WRITE,create,move,delete  <span class="nv">$dir</span> | <span class="k">while </span><span class="nb">read  </span>date <span class="nb">time </span>file event
+	<span class="k">do
+		</span><span class="nb">echo</span> <span class="nv">$event</span><span class="s1">'-'</span><span class="nv">$file</span>
+		<span class="k">case</span> <span class="nv">$event</span> <span class="k">in
+			</span>MODIFY|CREATE|MOVE|MODIFY,ISDIR|CREATE,ISDIR|MODIFY,ISDIR<span class="p">)</span>
+				<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="k">${</span><span class="nv">file</span>:<span class="p"> -4</span><span class="k">}</span><span class="s2">"</span> !<span class="o">=</span> <span class="s1">'4913'</span> <span class="o">]</span>  <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">"</span><span class="k">${</span><span class="nv">file</span>:<span class="p"> -1</span><span class="k">}</span><span class="s2">"</span> !<span class="o">=</span> <span class="s1">'~'</span> <span class="o">]</span>; <span class="k">then
+					</span><span class="nv">cmd</span><span class="o">=</span><span class="s2">"rsync -avz --exclude='*' --include=</span><span class="nv">$file</span><span class="s2"> </span><span class="nv">$dir</span><span class="s2"> </span><span class="nv">$host</span><span class="s2">::</span><span class="nv">$module</span><span class="s2">"</span>
+					<span class="c"># echo $cmd</span>
+					<span class="nv">$cmd</span>
+				<span class="k">fi</span>
+				<span class="p">;;</span>
+
+			MOVED_FROM|MOVED_FROM,ISDIR|DELETE|DELETE,ISDIR<span class="p">)</span>
+				<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="k">${</span><span class="nv">file</span>:<span class="p"> -4</span><span class="k">}</span><span class="s2">"</span> !<span class="o">=</span> <span class="s1">'4913'</span> <span class="o">]</span>  <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">"</span><span class="k">${</span><span class="nv">file</span>:<span class="p"> -1</span><span class="k">}</span><span class="s2">"</span> !<span class="o">=</span> <span class="s1">'~'</span> <span class="o">]</span>; <span class="k">then
+					</span><span class="nv">cmd</span><span class="o">=</span><span class="s2">"rsync -avz --delete-excluded --exclude="</span><span class="nv">$file</span><span class="s2">" </span><span class="nv">$dir</span><span class="s2"> </span><span class="nv">$host</span><span class="s2">::</span><span class="nv">$module</span><span class="s2">"</span>
+					<span class="c"># echo $cmd</span>
+					<span class="nv">$cmd</span>
+				<span class="k">fi</span>
+				<span class="p">;;</span>
+		<span class="k">esac</span>
+	<span class="k">done</span> &amp;
+<span class="k">done</span></code></pre></figure>
+
+<p>运行脚本</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console">cd /path/to/inotify-rsync
+chmod +x inotify-rsync.sh
+<span class="err">./inotify-rsync</span></code></pre></figure>
+
+<p>可以把这个脚本设置为开机启动，这样就可以自动同步了。</p>
+
+<h3 id="同步端">同步端</h3>
+
+<p>同步机器上要做两件事</p>
+
+<p><strong>1. 设置/etc/rsyncd.conf文件</strong></p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c"># vim /etc/rsyncd.conf</span>
+
+<span class="nv">uid</span><span class="o">=</span>root
+<span class="nv">gid</span><span class="o">=</span>root
+<span class="c"># 这个test就是上面脚本中用到的rsync_module名</span>
+<span class="c"># path指定同步过来的文件存放的路径</span>
+<span class="c"># 如果只允许部分ip的机器进行同步的话，设置allow为 192.168.1.1/100 类似的格式</span>
+<span class="o">[</span><span class="nb">test</span><span class="o">]</span>
+<span class="nv">path</span><span class="o">=</span>/path/to/your/dir
+allow <span class="k">*</span></code></pre></figure>
+
+<p><strong>2. 启动rsync daemon</strong></p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="err">rsync --daemon</span></code></pre></figure>
+
+<h3 id="其他">其他</h3>
+
+<p>金山的周洋同学用C++写了个<a href="http://hi.baidu.com/johntech/blog/item/f8bdaec8fb3c268dc81768c0.html">Sersync</a>，也是利用的inotify+rsync来实现实时同步，有兴趣的可以关注一下</p>
+
+					<br />
+					--EOF--
+					<p>若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+				</div>
+				<div id="disqus_thread"></div>
+				<script type="text/javascript">
+				  /**
+					* var disqus_identifier; [Optional but recommended: Define a unique identifier (e.g. post id or slug) for this thread]
+					*/
+				  (function() {
+				   var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				   dsq.src = 'http://lzyyblog.disqus.com/embed.js';
+				   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+				  })();
+				</script>
+				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript=lzyyblog">comments powered by Disqus.</a></noscript>
+			</div>
+			<div id="footer">
+	<p style="color:#ccc;font-size:12px;text-align: center">make the world a little better and easier</p>
+	<p style="clear:both"></p>
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1281124-24', 'limboy.me');
+  ga('send', 'pageview');
+
+</script>
+
+		</div>
+	</body>
+</html>

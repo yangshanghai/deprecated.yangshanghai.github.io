@@ -1,0 +1,335 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>YangShanghai's HQ</title>
+	<link rel="shortcut icon" href="/image/logo.png">
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+	<link rel="alternate" type="application/rss+xml" title="RSS" href="http://feeds.feedburner.com/lzyy">
+</head>
+
+	<body>
+		<div id="nav">
+	<div class="wrapper">
+		<div id="logo"><a href="/"><img src="/image/logo.png" /></a></h1></div>
+		<ul>
+			<li id="category-iOS"><a href="/category/iOS.html">iOS</a></li>
+			<li id="category-tech"><a href="/category/tech.html">技术</a></li>
+			<li id="category-essay"><a href="/category/essay.html">随笔</a></li>
+			<li id="category-reading"><a href="/category/reading.html">阅读</a></li>
+			<li id="category-design"><a href="/category/design.html">设计</a></li>
+			<li id="category-quotes"><a href="/quotes.html">引言</a></li>
+		</ul>
+	</div>
+</div>
+
+<script>
+var category = location.pathname;
+if (category == '/') {
+	document.getElementById('category-all').style.textDecoration = "underline";
+} else if (category == '/category/iOS.html') {
+	document.getElementById('category-iOS').style.textDecoration = "underline";
+} else if (category == '/category/tech.html') {
+	document.getElementById('category-tech').style.textDecoration = "underline";
+} else if (category == '/category/design.html') {
+	document.getElementById('category-design').style.textDecoration = "underline";
+} else if (category == '/category/essay.html') {
+	document.getElementById('category-essay').style.textDecoration = "underline";
+} else if (category == '/category/reading.html') {
+	document.getElementById('category-reading').style.textDecoration = "underline";
+} else if (category == '/quotes.html') {
+	document.getElementById('category-quotes').style.textDecoration = "underline";
+} else if (category == '/category/weekly-recommendation.html') {
+	document.getElementById('weekly-recommendation').style.textDecoration = "underline";
+}
+
+</script>
+
+		<div class="wrapper main">
+			<div id="content">
+				<h2>基于AFNetworking2.0和ReactiveCocoa2.1的iOS REST Client</h2>
+				<div class="cnt">
+					<p>在开发iOS App时经常会遇到跟后端REST API通信的情况。这就涉及到错误处理，NSDictionary与Model的映射，用户登录与登出，权限验证，Archive/UnArchive，Copy，AccessToken过期处理等等，如果没有很好地处理这些点，就容易出现代码复杂度增大，结构散乱，不方便后期维护的现象。</p>
+
+<p>正好最近在看AFNetworking2.0和ReactiveCocoa2.1，参考了github的<a href="https://github.com/octokit/octokit.objc">octokit</a>，重写了花瓣的iOS REST API，分享些心得。</p>
+
+<h3 id="基本结构">基本结构</h3>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="o">|-</span> <span class="n">HBPAPI</span><span class="p">.</span><span class="n">h</span>
+<span class="o">|-</span> <span class="n">Classes</span>
+	<span class="o">|-</span> <span class="n">HBPAPIManager</span><span class="p">.</span><span class="n">h</span>
+	<span class="o">|-</span> <span class="n">HBPAPIManager</span><span class="p">.</span><span class="n">m</span>
+	<span class="o">|-</span> <span class="n">Models</span>
+		<span class="o">|-</span> <span class="n">HBPObject</span><span class="p">.</span><span class="n">h</span>
+		<span class="o">|-</span> <span class="n">HBPObject</span><span class="p">.</span><span class="n">m</span>
+		<span class="o">|-</span> <span class="n">HBPUser</span><span class="p">.</span><span class="n">h</span>
+		<span class="o">|-</span> <span class="n">HBPUser</span><span class="p">.</span><span class="n">m</span>
+		<span class="p">...</span></code></pre></figure>
+
+<p>使用时，直接引用<code class="highlighter-rouge">HBPAPI.h</code>即可，里面包含了所有的Class。因为使用了AFNetworking2.0，所以不再是HBPClient，而是HBPManager。 HBPAPIManager包含了所有的跟服务端通信的方法，通过Category来区分。</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="cp">#pragma mark - HBPAPIManager (Private)
+</span>
+<span class="k">@interface</span> <span class="nc">HBPAPIManager</span> <span class="p">(</span><span class="nl">Private</span><span class="p">)</span>
+
+<span class="c1">// 内部统一使用这个方法来向服务端发送请求
+//
+// resultClass - 从服务端获取到JSON数据后，使用哪个Class来将JSON转换为OC的Model
+// listKey - 如果不指定，表示返回的是一个object，如user，如果指定表示返回的是一个数组，listKey就表示这个列表的keyname，如{'users':[]}, 那么listName就为'user'
+</span><span class="k">-</span> <span class="p">(</span><span class="n">RACSignal</span> <span class="o">*</span><span class="p">)</span><span class="nf">requestWithMethod</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">method</span> <span class="nf">relativePath</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">relativePath</span> <span class="nf">parameters</span><span class="p">:(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="nv">parameters</span> <span class="nf">resultClass</span><span class="p">:(</span><span class="n">Class</span><span class="p">)</span><span class="nv">resultClass</span> <span class="nf">listKey</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">listKey</span><span class="p">;</span>
+<span class="k">@end</span>
+
+
+<span class="cp">#pragma mark - HBPAPIManager (User)
+</span>
+<span class="k">@interface</span> <span class="nc">HBPAPIManager</span> <span class="p">(</span><span class="nl">User</span><span class="p">)</span>
+
+<span class="c1">// signal会send user，如果没有user，就会sendError
+// 必须当前用户已经登录的情况下调用
+</span><span class="k">-</span> <span class="p">(</span><span class="n">RACSignal</span> <span class="o">*</span><span class="p">)</span><span class="n">fetchUserInfo</span><span class="p">;</span>
+
+<span class="c1">// ...
+</span><span class="k">@end</span>
+
+
+<span class="cp">#pragma mark - HBPAPIManager (Friendship)
+</span><span class="o">//</span> <span class="p">...</span></code></pre></figure>
+
+<p>Models Group包含了所有跟服务端API对应的Model，比如<code class="highlighter-rouge">HBPComment</code></p>
+
+<p>HBPComment.h</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="cp">#import "HBPObject.h"
+</span>
+<span class="k">@class</span> <span class="nc">HBPUser</span><span class="p">;</span>
+
+<span class="k">@interface</span> <span class="nc">HBPComment</span> <span class="p">:</span> <span class="nc">HBPObject</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">,</span> <span class="n">assign</span><span class="p">)</span> <span class="n">NSInteger</span> <span class="n">commentID</span><span class="p">;</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">,</span> <span class="n">copy</span><span class="p">)</span> <span class="n">NSString</span> <span class="o">*</span><span class="n">createdAt</span><span class="p">;</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">,</span> <span class="n">strong</span><span class="p">)</span> <span class="n">HBPUser</span> <span class="o">*</span><span class="n">user</span><span class="p">;</span>
+<span class="c1">//...
+</span><span class="k">@end</span></code></pre></figure>
+
+<p>HBPComment.m</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="cp">#import "HBPComment.h"
+</span>
+<span class="k">@implementation</span> <span class="nc">HBPComment</span>
+
+<span class="k">-</span> <span class="p">(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="n">JSONKeysToPropertyKeys</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="p">@{</span>
+             <span class="s">@"comment_id"</span><span class="o">:</span> <span class="s">@"commentID"</span><span class="p">,</span>
+             <span class="s">@"user_id"</span><span class="o">:</span> <span class="s">@"userID"</span><span class="p">,</span>
+             <span class="s">@"created_at"</span><span class="o">:</span> <span class="s">@"createdAt"</span><span class="p">,</span>
+			 <span class="c1">//...
+</span>             <span class="p">};</span>
+<span class="p">}</span>
+
+<span class="k">@end</span></code></pre></figure>
+
+<h3 id="archive--unarchive--copy">Archive / UnArchive / Copy</h3>
+
+<p>每一个Object都要支持Archive / UnArchive / Copy，也就是要实现<code class="highlighter-rouge">&lt;NSCoding&gt;</code>和<code class="highlighter-rouge">&lt;NSCopying&gt;</code>协议，这两个协议的内容其实就是对Object的Property做些处理，所以如果可以在基类里把这些事都统一处理，就会方便许多。octokit使用<a href="https://github.com/MantleFramework/Mantle">Mantle</a>来做这些事情，不过我觉得Mantle还是有些麻烦，于是写了个通过运行时来获取property，并实现<code class="highlighter-rouge">&lt;NSCoding&gt;</code> 和 <code class="highlighter-rouge">&lt;NSCopying&gt;</code>的基类，只有两个公共方法：</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="cp">#import &lt;Foundation/Foundation.h&gt;
+</span>
+<span class="k">@interface</span> <span class="nc">HBPObject</span> <span class="p">:</span> <span class="nc">NSObject</span> <span class="o">&lt;</span><span class="n">NSCopying</span><span class="p">,</span> <span class="n">NSCoding</span><span class="o">&gt;</span>
+
+<span class="c1">// 解析API返回的JSON，返回对应的Model
+</span><span class="o">-</span> <span class="p">(</span><span class="n">id</span><span class="p">)</span><span class="n">initWithDictionary</span><span class="o">:</span><span class="p">(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="n">JSON</span><span class="p">;</span>
+
+<span class="c1">// JSON key到property的映射关系
+</span><span class="k">-</span> <span class="p">(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="n">JSONKeysToPropertyKeys</span><span class="p">;</span>
+<span class="k">@end</span></code></pre></figure>
+
+<p>其中<code class="highlighter-rouge">- (id)initWithDictionary:(NSDictionary *)JSON</code>的作用是遍历Object的Property，如果Property的Class是<code class="highlighter-rouge">HBPObject</code>，那么就调用<code class="highlighter-rouge">- (id)initWithDictionary:(NSDictionary *)JSO</code>，不然就通过KVC的<code class="highlighter-rouge">setValue:forKey:</code>来设定值。</p>
+
+<p><code class="highlighter-rouge">- (NSDictionary *)JSONKeysToPropertyKeys</code>的内容大概是这样：</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">-</span> <span class="p">(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="n">JSONKeysToPropertyKeys</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="p">@{</span>
+             <span class="s">@"id"</span><span class="o">:</span> <span class="s">@"ID"</span><span class="p">,</span>
+             <span class="s">@"nav_link"</span><span class="o">:</span> <span class="s">@"navLink"</span><span class="p">,</span>
+             <span class="p">};</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>这样通过一个<code class="highlighter-rouge">HBPObject</code>基类就完成了 Archive / UnArchive / Copy 。</p>
+
+<h3 id="用户的登录与登出">用户的登录与登出</h3>
+
+<p>先来说说登录，由于使用RAC，在构造API时，就不需要传入Block了，随之而来的一个问题就是需要在注释中说明<code class="highlighter-rouge">sendNext</code>时会发送什么内容。</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">+</span> <span class="p">(</span><span class="n">RACSignal</span> <span class="o">*</span><span class="p">)</span><span class="nf">signInUsingUsername</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">username</span> <span class="nf">passowrd</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">password</span>
+<span class="p">{</span>
+    <span class="n">NSAssert</span><span class="p">(</span><span class="n">API_CLIENT_ID</span> <span class="o">&amp;&amp;</span> <span class="n">API_CLIENT_SECRET</span><span class="p">,</span> <span class="s">@"API_CLIENT_ID and API_CLIENT_SECRET must be setted"</span><span class="p">);</span>
+    <span class="n">NSDictionary</span> <span class="o">*</span><span class="n">parameters</span> <span class="o">=</span> <span class="p">@{</span>
+                                 <span class="s">@"grant_type"</span><span class="o">:</span> <span class="s">@"password"</span><span class="p">,</span>
+                                 <span class="s">@"username"</span><span class="o">:</span> <span class="n">username</span><span class="p">,</span>
+                                 <span class="s">@"password"</span><span class="o">:</span> <span class="n">password</span><span class="p">,</span>
+                                 <span class="p">};</span>
+    <span class="n">HBPAPIManager</span> <span class="o">*</span><span class="n">manager</span> <span class="o">=</span> <span class="p">[</span><span class="n">self</span> <span class="nf">createManager</span><span class="p">];</span>
+    
+    <span class="k">return</span> <span class="p">[[</span><span class="n">manager</span> <span class="nf">fetchTokenWithParameters</span><span class="p">:</span><span class="n">parameters</span><span class="p">]</span>
+            <span class="nf">setNameWithFormat</span><span class="p">:</span><span class="s">@"+signInUsingUsername:%@ password:%@"</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">];</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>看着还挺简单的吧，因为主要工作都是<code class="highlighter-rouge">+fetchMoreData:parameters</code>在做，看看它的实现</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">-</span> <span class="p">(</span><span class="n">RACSignal</span> <span class="o">*</span><span class="p">)</span><span class="nf">fetchTokenWithParameters</span><span class="p">:(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="nv">parameters</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="p">[[[[[[[</span><span class="n">self</span> <span class="nf">rac_POST</span><span class="p">:</span><span class="s">@"oauth/access_token"</span> <span class="nf">parameters</span><span class="p">:</span><span class="nf">parameters</span><span class="p">]</span>
+             <span class="c1">// reduceEach的作用是传入多个参数，返回单个参数，是基于`map`的一种实现
+</span>             <span class="nl">reduceEach:</span><span class="o">^</span><span class="n">id</span><span class="p">(</span><span class="n">AFHTTPRequestOperation</span> <span class="o">*</span><span class="n">operation</span><span class="p">,</span> <span class="n">NSDictionary</span> <span class="o">*</span><span class="n">response</span><span class="p">){</span>
+			     <span class="c1">// 拿到token后，就设置token property
+</span>				 <span class="c1">// setToken:方法会被触发，在那里会设置请求的头信息，如Authorization。
+</span>                 <span class="n">HBPAccessToken</span> <span class="o">*</span><span class="n">token</span> <span class="o">=</span> <span class="p">[[</span><span class="n">HBPAccessToken</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithDictionary</span><span class="p">:</span><span class="n">response</span><span class="p">]</span><span class="err">;</span>
+                 <span class="n">self</span><span class="p">.</span><span class="n">token</span> <span class="o">=</span> <span class="n">token</span><span class="err">;</span>
+                 <span class="k">return</span> <span class="n">self</span><span class="err">;</span>
+             <span class="p">}]</span>
+             <span class="nf">catch</span><span class="p">:</span><span class="o">^</span><span class="n">RACSignal</span> <span class="o">*</span><span class="p">(</span><span class="n">NSError</span> <span class="o">*</span><span class="n">error</span><span class="p">)</span> <span class="p">{</span>
+			     <span class="c1">// 对Error进行处理，方便外部识别
+</span>                 <span class="n">NSInteger</span> <span class="n">code</span> <span class="o">=</span> <span class="n">error</span><span class="p">.</span><span class="n">code</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1001</span> <span class="p">?</span> <span class="n">HBPAPIManagerErrorConnectionFailed</span> <span class="p">:</span> <span class="n">HBPAPIManagerErrorAuthenticatedFailed</span><span class="p">;</span>
+                 <span class="n">NSError</span> <span class="o">*</span><span class="n">apiError</span> <span class="o">=</span> <span class="p">[[</span><span class="n">NSError</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithDomain</span><span class="p">:</span><span class="n">HBPAPIManagerErrorDomain</span> <span class="nf">code</span><span class="p">:</span><span class="n">code</span> <span class="n">userInfo</span><span class="o">:</span><span class="nb">nil</span><span class="p">];</span>
+                 <span class="k">return</span> <span class="p">[</span><span class="n">RACSignal</span> <span class="nf">error</span><span class="p">:</span><span class="n">apiError</span><span class="p">];</span>
+             <span class="p">}]</span>
+             <span class="nf">then</span><span class="p">:</span><span class="o">^</span><span class="n">RACSignal</span> <span class="o">*</span><span class="p">{</span>
+			     <span class="c1">// 一切正常的话，顺便获取用户信息
+</span>                 <span class="k">return</span> <span class="p">[</span><span class="n">self</span> <span class="nf">fetchUserInfo</span><span class="p">];</span>
+             <span class="p">}]</span>
+             <span class="nf">doNext</span><span class="p">:</span><span class="o">^</span><span class="p">(</span><span class="n">HBPUser</span> <span class="o">*</span><span class="n">user</span><span class="p">)</span> <span class="p">{</span>
+			     <span class="c1">// doNext相当于一个钩子，是在sendNext时会被执行的一段代码
+</span>                 <span class="n">self</span><span class="p">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">user</span><span class="p">;</span>
+             <span class="p">}]</span>
+			 <span class="c1">// 把发送内容换成self
+</span>             <span class="nl">mapReplace:</span><span class="n">self</span><span class="p">]</span>
+			 <span class="c1">// 避免side effect
+</span>             <span class="n">replayLazily</span><span class="p">];</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>这里对signal进行了chain / modify / hook 等操作，主要作用是获取access token和用户信息。</p>
+
+<p>用户的登出就简单了，直接设置<code class="highlighter-rouge">user</code>和<code class="highlighter-rouge">token</code>为<code class="highlighter-rouge">nil</code>就行了。</p>
+
+<h3 id="设置超时时间和缓存策略">设置超时时间和缓存策略</h3>
+
+<p>因为AF2.0使用了新的架构，导致要设置Request的超时和缓存稍微有些麻烦，需要新建一个继承自<code class="highlighter-rouge">AFHTTPRequestSerializer</code>的Class</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">@interface</span> <span class="nc">HBPAPIRequestSerializer</span> <span class="p">:</span> <span class="nc">AFHTTPRequestSerializer</span> <span class="k">@end</span>
+
+<span class="k">@implementation</span> <span class="nc">HBPAPIRequestSerializer</span>
+
+<span class="k">-</span> <span class="p">(</span><span class="n">NSMutableURLRequest</span> <span class="o">*</span><span class="p">)</span><span class="nf">requestWithMethod</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">method</span> <span class="nf">URLString</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">URLString</span> <span class="nf">parameters</span><span class="p">:(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="nv">parameters</span>
+<span class="p">{</span>
+    <span class="n">NSMutableURLRequest</span> <span class="o">*</span><span class="n">request</span> <span class="o">=</span> <span class="p">[</span><span class="n">super</span> <span class="nf">requestWithMethod</span><span class="p">:</span><span class="n">method</span> <span class="nf">URLString</span><span class="p">:</span><span class="n">URLString</span> <span class="n">parameters</span><span class="o">:</span><span class="n">parameters</span><span class="p">];</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">timeoutInterval</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
+    <span class="n">request</span><span class="p">.</span><span class="n">cachePolicy</span> <span class="o">=</span> <span class="n">NSURLRequestReloadIgnoringLocalCacheData</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">@end</span></code></pre></figure>
+
+<p>然后将这个class设置为manager.requestSerializer</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">HBPAPIManager</span> <span class="o">*</span><span class="n">manager</span> <span class="o">=</span> <span class="p">[[</span><span class="n">HBPAPIManager</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithBaseURL</span><span class="p">:[</span><span class="n">NSURL</span> <span class="nf">URLWithString</span><span class="p">:</span><span class="n">API_SERVER</span><span class="p">]];</span>
+<span class="n">manager</span><span class="p">.</span><span class="n">requestSerializer</span> <span class="o">=</span> <span class="p">[</span><span class="n">HBPAPIRequestSerializer</span> <span class="nf">serializer</span><span class="p">];</span></code></pre></figure>
+
+<p>这样就行了</p>
+
+<h3 id="权限验证">权限验证</h3>
+
+<p>这个比较简单些，直接在方法里面加上判断</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">-</span> <span class="p">(</span><span class="n">RACSignal</span> <span class="o">*</span><span class="p">)</span><span class="nf">createCommentWithPinID</span><span class="p">:(</span><span class="n">NSInteger</span><span class="p">)</span><span class="nv">pinID</span> <span class="nf">text</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">text</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">self</span><span class="p">.</span><span class="n">isAuthenticated</span><span class="p">)</span> <span class="k">return</span> <span class="p">[</span><span class="n">RACSignal</span> <span class="nf">error</span><span class="p">:[</span><span class="n">self</span><span class="p">.</span><span class="n">class</span> <span class="nf">authenticatedError</span><span class="p">]];</span>
+ 
+    <span class="k">return</span> <span class="p">[</span><span class="n">self</span> <span class="nf">requestWithMethod</span><span class="p">:</span><span class="s">@"POST"</span> <span class="nf">relativePath</span><span class="p">:[</span><span class="n">NSString</span> <span class="nf">stringWithFormat</span><span class="p">:</span><span class="s">@"pins/%d/comments"</span><span class="p">,</span> <span class="n">pinID</span><span class="p">]</span> <span class="n">parameters</span><span class="o">:</span><span class="p">@{</span><span class="s">@"text"</span><span class="o">:</span> <span class="n">text</span><span class="p">}</span> <span class="n">resultClass</span><span class="o">:</span><span class="p">[</span><span class="n">HBPComment</span> <span class="nf">class</span><span class="p">]</span> <span class="n">listKey</span><span class="o">:</span><span class="s">@"comment"</span><span class="p">];</span>
+<span class="p">}</span></code></pre></figure>
+
+<h3 id="accesstoken过期的处理">AccessToken过期的处理</h3>
+
+<p>AccessToken过期和获取新的AccessToken可以交给使用者来做，但是会比较麻烦，最好的方法是过期后自动去获取新的AccessToken，拿到Token后自动去执行之前失败的请求，这块我是这么处理的</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">-</span> <span class="p">(</span><span class="n">RACSignal</span> <span class="o">*</span><span class="p">)</span><span class="nf">requestWithMethod</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">method</span> <span class="nf">relativePath</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">relativePath</span> <span class="nf">parameters</span><span class="p">:(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="nv">parameters</span> <span class="nf">resultClass</span><span class="p">:(</span><span class="n">Class</span><span class="p">)</span><span class="nv">resultClass</span> <span class="nf">listKey</span><span class="p">:(</span><span class="n">NSString</span> <span class="o">*</span><span class="p">)</span><span class="nv">listKey</span>
+<span class="p">{</span>
+    <span class="n">RACSignal</span> <span class="o">*</span><span class="n">requestSignal</span><span class="p">;</span>
+	<span class="c1">// create requestSignal
+</span>	<span class="c1">// ...
+</span>
+	<span class="k">return</span> <span class="p">[</span><span class="n">requestSignal</span> <span class="nf">catch</span><span class="p">:</span><span class="o">^</span><span class="n">RACSignal</span> <span class="o">*</span><span class="p">(</span><span class="n">NSError</span> <span class="o">*</span><span class="n">error</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">error</span><span class="p">.</span><span class="n">code</span> <span class="o">==</span> <span class="n">HBPAPIManagerErrorInvalidAccessToken</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">[[[</span><span class="n">self</span> <span class="nf">refreshToken</span><span class="p">]</span> <span class="nf">ignoreValues</span><span class="p">]</span> <span class="nf">concat</span><span class="p">:</span><span class="n">requestSignal</span><span class="p">];</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">RACSignal</span> <span class="nf">error</span><span class="p">:</span><span class="n">error</span><span class="p">];</span>
+    <span class="p">}];</span>
+<span class="p">}</span></code></pre></figure>
+
+<h3 id="hbpobject-subclass">HBPObject SubClass</h3>
+
+<p>那些继承自<code class="highlighter-rouge">HBPObject</code>的子类，有些事情是<code class="highlighter-rouge">HBPObject</code>无法处理的，比如NSArray的Property，因为Objective-C不支持generic，所以无法知道这个数组包含的究竟是怎样的Class，这时就需要在子类对这些property做处理。</p>
+
+<p>比如画板(HBPBoard)有一个叫<code class="highlighter-rouge">pins</code>的NSArray属性，因为在<code class="highlighter-rouge">HBPObject</code>中使用了KVC，所以如果子类有类似<code class="highlighter-rouge">setXXX:</code>的方法的话，那么该方法就会被调用，利用这一点，就可以处理那些特殊情况。</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">@implementation</span> <span class="nc">HBPBoard</span>
+
+<span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="nf">setPins</span><span class="p">:(</span><span class="n">NSArray</span> <span class="o">*</span><span class="p">)</span><span class="nv">pins</span>
+<span class="p">{</span>
+    <span class="n">_pins</span> <span class="o">=</span> <span class="p">[[</span><span class="n">pins</span><span class="p">.</span><span class="n">rac_sequence</span> <span class="nf">map</span><span class="p">:</span><span class="o">^</span><span class="n">id</span><span class="p">(</span><span class="n">id</span> <span class="n">value</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">[[</span><span class="n">HBPPin</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithDictionary</span><span class="p">:</span><span class="n">value</span><span class="p">];</span>
+    <span class="p">}]</span> <span class="nf">array</span><span class="p">];</span>
+<span class="p">}</span>
+
+<span class="k">@end</span></code></pre></figure>
+
+<p>再比如，返回的JSON内容中，有一个叫<code class="highlighter-rouge">content</code>的key，其中有type / date / color 等sub key，而你只想要<code class="highlighter-rouge">type</code>信息，只需添加一个<code class="highlighter-rouge">type</code> property，然后在<code class="highlighter-rouge">setContent</code>时，设置一下<code class="highlighter-rouge">type</code>即可。</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="nf">setContent</span><span class="p">:(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="nv">content</span>
+<span class="p">{</span>
+    <span class="n">_type</span> <span class="o">=</span> <span class="n">content</span><span class="p">[</span><span class="s">@"type"</span><span class="p">];</span>
+<span class="p">}</span></code></pre></figure>
+
+<hr />
+
+<p>以上就是我在使用AFNetworking2.0和ReactiveCocoa2.1构建iOS REST Client时的一些小心得，确实能感觉到RAC带了不少方便，虽然也同时带来了一些弊端（如返回的内容不明确，学习成本高），但还是利大于弊。</p>
+
+<p>有什么问题和想法，欢迎交流。</p>
+
+					<br />
+					--EOF--
+					<p>若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+				</div>
+				<div id="disqus_thread"></div>
+				<script type="text/javascript">
+				  /**
+					* var disqus_identifier; [Optional but recommended: Define a unique identifier (e.g. post id or slug) for this thread]
+					*/
+				  (function() {
+				   var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				   dsq.src = 'http://lzyyblog.disqus.com/embed.js';
+				   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+				  })();
+				</script>
+				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript=lzyyblog">comments powered by Disqus.</a></noscript>
+			</div>
+			<div id="footer">
+	<p style="color:#ccc;font-size:12px;text-align: center">make the world a little better and easier</p>
+	<p style="clear:both"></p>
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1281124-24', 'limboy.me');
+  ga('send', 'pageview');
+
+</script>
+
+		</div>
+	</body>
+</html>

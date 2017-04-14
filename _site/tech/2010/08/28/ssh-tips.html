@@ -1,0 +1,273 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>YangShanghai's HQ</title>
+	<link rel="shortcut icon" href="/image/logo.png">
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+	<link rel="alternate" type="application/rss+xml" title="RSS" href="http://feeds.feedburner.com/lzyy">
+</head>
+
+	<body>
+		<div id="nav">
+	<div class="wrapper">
+		<div id="logo"><a href="/"><img src="/image/logo.png" /></a></h1></div>
+		<ul>
+			<li id="category-iOS"><a href="/category/iOS.html">iOS</a></li>
+			<li id="category-tech"><a href="/category/tech.html">技术</a></li>
+			<li id="category-essay"><a href="/category/essay.html">随笔</a></li>
+			<li id="category-reading"><a href="/category/reading.html">阅读</a></li>
+			<li id="category-design"><a href="/category/design.html">设计</a></li>
+			<li id="category-quotes"><a href="/quotes.html">引言</a></li>
+		</ul>
+	</div>
+</div>
+
+<script>
+var category = location.pathname;
+if (category == '/') {
+	document.getElementById('category-all').style.textDecoration = "underline";
+} else if (category == '/category/iOS.html') {
+	document.getElementById('category-iOS').style.textDecoration = "underline";
+} else if (category == '/category/tech.html') {
+	document.getElementById('category-tech').style.textDecoration = "underline";
+} else if (category == '/category/design.html') {
+	document.getElementById('category-design').style.textDecoration = "underline";
+} else if (category == '/category/essay.html') {
+	document.getElementById('category-essay').style.textDecoration = "underline";
+} else if (category == '/category/reading.html') {
+	document.getElementById('category-reading').style.textDecoration = "underline";
+} else if (category == '/quotes.html') {
+	document.getElementById('category-quotes').style.textDecoration = "underline";
+} else if (category == '/category/weekly-recommendation.html') {
+	document.getElementById('weekly-recommendation').style.textDecoration = "underline";
+}
+
+</script>
+
+		<div class="wrapper main">
+			<div id="content">
+				<h2>SSH小技巧</h2>
+				<div class="cnt">
+					<p>p(date). 2010-08-28</p>
+
+<p>参考：
+<a href="http://blog.ksplice.com/2010/08/six-things-i-wish-mom-told-me-about-ssh/">Six Things I wish Mom told me(about ssh)</a>
+<a href="http://troy.jdmz.net/rsync/index.html">Using Rsync and Ssh</a></p>
+
+<p>用过linux的，对SSH应该就比较熟悉了，但有些技巧可能你未必知道。</p>
+
+<h3 id="连接成功后运行命令">连接成功后运行命令</h3>
+
+<p>我们都知道可以通过SSH获取远程shell，然后运行命令。如果只想运行单个命令的话，直接把命令附加在SSH命令之后即可，如</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="gp">wdaher@rocksteady:~$ </span>ssh bebop uname -a
+Linux bebop 2.6.32-24-generic <span class="c">#39-Ubuntu SMP Wed Jul 28 05:14:15 UTC 2010 x86_64 GNU/Linux</span></code></pre></figure>
+
+<p>这个最好结合无须输入密码的SSH登录。如果想获取python版本，直接”ssh hostname python -V”</p>
+
+<p>但有些命令可能会报错，如”top”</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="gp">wdaher@rocksteady:~$ </span>ssh bebop top
+TERM environment variable not set.</code></pre></figure>
+
+<p>这时只需加上”-t”参数就行了。</p>
+
+<p>这里我们执行ssh连接时并没有指定具体的主机名(ip)和用户，而只是”bebop”，这是如何做到的呢？且看下文</p>
+
+<h3 id="使用别名">使用别名</h3>
+
+<p>假如在一个主机上为不同用户分别开通了不同的ssh账号，连接时就得这样</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="gp">wdaher@rocksteady:~$ </span>ssh -p 2222 bob.example.com
+<span class="gp">wdaher@rocksteady:~$ </span>ssh -p 8183 waseem@alice.example.com
+<span class="gp">wdaher@rocksteady:~$ </span>ssh -p 31337 -l waseemio wsd.example.com</code></pre></figure>
+
+<p>很麻烦，而且端口或者其他参数有变动的话，不一定记得住。其实只要配置一下.ssh/config文件就可以了。</p>
+
+<pre>
+Host bob
+    HostName bob.example.com
+    Port 2222
+    User wdaher
+
+Host alice
+    HostName alice.example.com
+    Port 8183
+    User waseem
+
+Host self
+    HostName wsd.example.com
+    Port 31337
+    User waseemio
+</pre>
+
+<p>连接时，就变成这样了</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="gp">wdaher@rocksteady:~$ </span>ssh bob
+<span class="gp">wdaher@rocksteady:~$ </span>ssh alice
+<span class="gp">wdaher@rocksteady:~$ </span>ssh self</code></pre></figure>
+
+<p>是不是很方便，如果SSH的参数改变的话，修改配置文件就行了，命令不变。</p>
+
+<h3 id="端口转发">端口转发</h3>
+
+<p>假设有这么个情况：你已下班回家，这时想要查看公司内网(analytics)的某个web页，但只能SSH到自己在公司的电脑(desktop)，desktop和analytics在一个局域网。</p>
+
+<p>先来看一段命令</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">ssh desktop -L 8080:desktop:80</code></pre></figure>
+
+<p>这段命令表示的是ssh连到desktop后，转发本地8080端口到desktop的80端口，这时，如果访问”http://localhost:8080”，就会转发到desktop的80端口。这样的话，把desktop:80换成analytics:80不就大功告成了吗</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">ssh desktop -L 8080:analytics:80</code></pre></figure>
+
+<p>这样访问本地的8080端口，就会转到analytics的80端口，通过desktop这个跳板。</p>
+
+<p>更加一劳永逸的方法是使用-D参数，将desktop变成一个<a href="http://baike.baidu.com/view/490489.htm?fr=ala0_1">socks5</a>代理服务器(对这个-D命令，大家应该都很熟悉了吧)，然后在浏览器中配置代理为”localhost:8080”</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">ssh desktop -D 8080 desktop</code></pre></figure>
+
+<p>这样所有的浏览器访问都会通过desktop进行转发，也就是说直接访问http://analytics就可以了。(analytics地址在hosts里配置，如192.168.1.110 analytics)</p>
+
+<h3 id="使用">使用”~”</h3>
+
+<p>”~”(不包括引号)是ssh保留字符，在新行输入”~”后，可以配合很多键，其中最常用的就是”~.”和”~^Z”(Ctrl+Z)</p>
+
+<p>”~.”会终止ssh连接，如果中断了连接，又不想等ssh session过期，就可以使用这个快捷键。</p>
+
+<p>”~^Z”会把当前的ssh连接放到后台，等完成了其他工作后，再把这个连接取出来。</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="gp">wdaher@rocksteady:~$ </span>ssh bebop
+<span class="gp">wdaher@bebop:~$ </span>sleep 10000
+<span class="gp">wdaher@bebop:~$ </span>~^Z <span class="o">[</span><span class="nb">suspend </span>ssh]
+
+<span class="o">[</span>1]+  Stopped                 ssh bebop
+<span class="gp">wdaher@rocksteady:~$ </span><span class="c"># Do something else</span>
+<span class="gp">wdaher@rocksteady:~$ </span><span class="nb">fg</span> <span class="c"># and you're back!</span></code></pre></figure>
+
+<h3 id="通过authorized_keys指定登录后要执行的命令">通过authorized_keys指定登录后要执行的命令</h3>
+
+<p>这个跟前面提到的”连接成功后运行命令”不一样，这个命令是定义在authorized_keys里的，ssh连上后，只能执行该命令，并且执行完后立即退出。</p>
+
+<p>先看看正常的authorized_keys</p>
+<pre>
+ssh-dss AAAAB3NzaC1kc3MAAAEBAKYJenaYvMG3nHwWxKwlWLjHb77CT2hXwmC8Ap+fG8wjlaY/9t4u
+A+2qx9JNorgdrWKhHSKHokFFlWRj+qk3q+lGHS+hsXuvta44W0yD0y0sW62wrEVegz+JVmntxeYc0nDz
+5tVGfZe6ydlgomzj1bhfdpYe+BAwop8L+EMqKLS4iSacNjoPlHsmqHMnbibn3tBqJEq2QJjEPaiYj1iP
+5IaCuYBhuTKQGa+oyH3mXEif5CKdsIKBj46B0tCy0/GC7oWcUN92QdLrUyTeRJZsTWsxKpRbMliD2pBh
+4oyX/aXEf8+HZBrO5vQjDBCfTFQA+35Xrd3eTVEjkGkncI0SAeUAAAAVAMZSASmQ9Pi38mdm6oiVXD55
+Kk2rAAABAE/bA402VuCsOLg9YS0NKxugT+o4UuIjyl6b2/cMmBVWO39lWAjcsKK/zEdJbrOdt/sKsxIK
+1/ZIvtl92DLlMhci5c4tBjCODey4yjLhApjWgvX9D5OPp89qhah4zu509uNX7uH58Zw/+m6ZOLHN28mV
+5KLUl7FTL2KZ583KrcWkUA0Id4ptUa9CAkcqn/gWkHMptgVwaZKlqZ+QtEa0V2IwUDWS097p3SlLvozw
+46+ucWxwTJttCHLzUmNN7w1cIv0w/OHh5IGh+wWjV9pbO0VT3/r2jxkzqksKOYAb5CYzSNRyEwp+NIKr
+Y+aJz7myu4Unn9de4cYsuXoAB6FQ5I8AAAEBAJSmDndXJCm7G66qdu3ElsLT0Jlz/es9F27r+xrg5pZ5
+GjfBCRvHNo2DF4YW9MKdUQiv+ILMY8OISduTeu32nyA7dwx7z5M8b+DtasRAa1U03EfpvRQps6ovu79m
+bt1OE8LS9ql8trx8qyIpYmJxmzIdBQ+kzkY+9ZlaXsaU0Ssuda7xPrX4405CbnKcpvM6q6okMP86Ejjn
+75Cfzhv65hJkCjbiF7FZxosCRIuYbhEEKu2Z9Dgh+ZbsZ+9FETZVzKBs4fySA6dIw6zmGINd+KY6umMW
+yJNej2Sia70fu3XLHj2yBgN5cy8arlZ80q1Mcy763RjYGkR/FkLJ611HWIA= thisuser@thishost
+</pre>
+
+<p>修改之后，就是这样</p>
+<pre>
+from="10.1.1.1",command="/home/remoteuser/command" ssh-dss AAAA...
+</pre>
+
+<p>其实就是在最前面加了from和command，from表明从哪个ip连过来的，如果是用adsl拨号上网，ip会经常变动，可以把这个参数去掉。command表明连接成功后要执行的命令，可以在command里限制该用户可以执行的命令(别忘了加上可执行权限)，假设限制该用户只能执行rsync命令:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#!/bin/sh</span>
+
+<span class="k">case</span> <span class="s2">"</span><span class="nv">$SSH_ORIGINAL_COMMAND</span><span class="s2">"</span> <span class="k">in</span>
+<span class="k">*</span><span class="se">\&amp;</span><span class="k">*</span><span class="p">)</span>
+<span class="nb">echo</span> <span class="s2">"Rejected"</span>
+<span class="p">;;</span>
+<span class="k">*</span><span class="se">\(</span><span class="k">*</span><span class="p">)</span>
+<span class="nb">echo</span> <span class="s2">"Rejected"</span>
+<span class="p">;;</span>
+<span class="k">*</span><span class="se">\{</span><span class="k">*</span><span class="p">)</span>
+<span class="nb">echo</span> <span class="s2">"Rejected"</span>
+<span class="p">;;</span>
+<span class="k">*</span><span class="se">\;</span><span class="k">*</span><span class="p">)</span>
+<span class="nb">echo</span> <span class="s2">"Rejected"</span>
+<span class="p">;;</span>
+<span class="k">*</span><span class="se">\&lt;</span><span class="k">*</span><span class="p">)</span>
+<span class="nb">echo</span> <span class="s2">"Rejected"</span>
+<span class="p">;;</span>
+<span class="k">*</span><span class="se">\`</span><span class="k">*</span><span class="p">)</span>
+<span class="nb">echo</span> <span class="s2">"Rejected"</span>
+<span class="p">;;</span>
+<span class="k">*</span><span class="se">\|</span><span class="k">*</span><span class="p">)</span>
+<span class="nb">echo</span> <span class="s2">"Rejected"</span>
+<span class="p">;;</span>
+rsync<span class="se">\ </span>--server<span class="k">*</span><span class="p">)</span>
+<span class="nv">$SSH_ORIGINAL_COMMAND</span>
+<span class="p">;;</span>
+<span class="k">*</span><span class="p">)</span>
+<span class="nb">echo</span> <span class="s2">"Rejected"</span>
+<span class="p">;;</span>
+<span class="k">esac</span> </code></pre></figure>
+
+<p>$SSH_ORIGINAL_COMMAND表示的是用户实际执行的命令</p>
+
+<h3 id="其他技巧">其他技巧</h3>
+
+<h3 id="禁止root用户登录">禁止Root用户登录</h3>
+
+<p>允许root用户登录太危险了(虽然很方便)，因为可以删除任何文件，可以在’/etc/ssh/sshd_config’里配置一下。</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">PermitRootLogin no 
+<span class="c">#或者只允许执行有限的命令</span>
+PermitRootLogin forced-commands-only </code></pre></figure>
+
+<h3 id="免密码登录">免密码登录</h3>
+
+<p>先用ssh-keygen生成一对私钥和公钥，然后把公钥添加到远程主机的authorized_keys里就行了</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#生成私钥和公钥，默认放在~/.ssh/文件夹下，也可以自定义，提示输入passphare时，直接回车</span>
+<span class="c">#顺利的话就会在~/.ssh/文件夹下生成id_rsa.pub和id_rsa两个文件</span>
+ssh-keygen -t rsa
+
+<span class="c">#把id_rsa.pub上传到远程主机，方法很多，ssh-copy-id只是其中一种</span>
+ssh-copy-id username@hostname
+<span class="c">#如果id_rsa.pub在其他文件夹下</span>
+ssh-copy-id -i /path/to/id_rsa.pub username@hostname</code></pre></figure>
+
+<p>这样下次就可以直接登录了</p>
+
+					<br />
+					--EOF--
+					<p>若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+				</div>
+				<div id="disqus_thread"></div>
+				<script type="text/javascript">
+				  /**
+					* var disqus_identifier; [Optional but recommended: Define a unique identifier (e.g. post id or slug) for this thread]
+					*/
+				  (function() {
+				   var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				   dsq.src = 'http://lzyyblog.disqus.com/embed.js';
+				   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+				  })();
+				</script>
+				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript=lzyyblog">comments powered by Disqus.</a></noscript>
+			</div>
+			<div id="footer">
+	<p style="color:#ccc;font-size:12px;text-align: center">make the world a little better and easier</p>
+	<p style="clear:both"></p>
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1281124-24', 'limboy.me');
+  ga('send', 'pageview');
+
+</script>
+
+		</div>
+	</body>
+</html>

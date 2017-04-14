@@ -1,0 +1,266 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>YangShanghai's HQ</title>
+	<link rel="shortcut icon" href="/image/logo.png">
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/syntax.css" />
+	<link rel="alternate" type="application/rss+xml" title="RSS" href="http://feeds.feedburner.com/lzyy">
+</head>
+
+	<body>
+		<div id="nav">
+	<div class="wrapper">
+		<div id="logo"><a href="/"><img src="/image/logo.png" /></a></h1></div>
+		<ul>
+			<li id="category-iOS"><a href="/category/iOS.html">iOS</a></li>
+			<li id="category-tech"><a href="/category/tech.html">技术</a></li>
+			<li id="category-essay"><a href="/category/essay.html">随笔</a></li>
+			<li id="category-reading"><a href="/category/reading.html">阅读</a></li>
+			<li id="category-design"><a href="/category/design.html">设计</a></li>
+			<li id="category-quotes"><a href="/quotes.html">引言</a></li>
+		</ul>
+	</div>
+</div>
+
+<script>
+var category = location.pathname;
+if (category == '/') {
+	document.getElementById('category-all').style.textDecoration = "underline";
+} else if (category == '/category/iOS.html') {
+	document.getElementById('category-iOS').style.textDecoration = "underline";
+} else if (category == '/category/tech.html') {
+	document.getElementById('category-tech').style.textDecoration = "underline";
+} else if (category == '/category/design.html') {
+	document.getElementById('category-design').style.textDecoration = "underline";
+} else if (category == '/category/essay.html') {
+	document.getElementById('category-essay').style.textDecoration = "underline";
+} else if (category == '/category/reading.html') {
+	document.getElementById('category-reading').style.textDecoration = "underline";
+} else if (category == '/quotes.html') {
+	document.getElementById('category-quotes').style.textDecoration = "underline";
+} else if (category == '/category/weekly-recommendation.html') {
+	document.getElementById('weekly-recommendation').style.textDecoration = "underline";
+}
+
+</script>
+
+		<div class="wrapper main">
+			<div id="content">
+				<h2>ReSwift 介绍</h2>
+				<div class="cnt">
+					<h3 id="什么是-reswift">什么是 ReSwift</h3>
+
+<p><a href="https://github.com/ReSwift/ReSwift">ReSwift</a> 是基于 <a href="http://redux.js.org/">Redux</a> 思想实现的 Swift 类库。基本的流程如下</p>
+
+<p><img src="/image/14808452245719.jpg" alt="" /></p>
+
+<p>当用户点击了视图上的某个元素时，会发出一个 <code class="highlighter-rouge">Action</code>，这个 <code class="highlighter-rouge">Action</code> 包含了两个基本元素：<code class="highlighter-rouge">Action Type</code> 和 <code class="highlighter-rouge">Action Payload</code>，比如「点击收藏按钮」这个 <code class="highlighter-rouge">Action</code>，可能会被描述为：<code class="highlighter-rouge">Action("CollectButtonTapped", ["itemID": 189])</code>。然后这个 <code class="highlighter-rouge">Action</code> 就会到达 <code class="highlighter-rouge">Store</code>，<code class="highlighter-rouge">Store</code> 也很简单，只做两件事：1. 接收 <code class="highlighter-rouge">Action</code>；2. 将 <code class="highlighter-rouge">Action</code> 和 <code class="highlighter-rouge">State</code> 发送给 <code class="highlighter-rouge">Reducer</code>。<code class="highlighter-rouge">Reducer</code> 做的事情就更简单了，接收 <code class="highlighter-rouge">Store</code> 发出的 <code class="highlighter-rouge">Action</code> 和 <code class="highlighter-rouge">State</code>，内部运算之后，返回一个新的 <code class="highlighter-rouge">State</code>。<code class="highlighter-rouge">Store</code> 拿到了新的  <code class="highlighter-rouge">State</code> 后，再把 <code class="highlighter-rouge">State</code> 发送给 <code class="highlighter-rouge">View</code>。<code class="highlighter-rouge">View</code> 渲染新的 <code class="highlighter-rouge">State</code>。</p>
+
+<p>简单描述下各个模块的职责：</p>
+
+<h4 id="view">View</h4>
+<p><code class="highlighter-rouge">View</code> 可以理解为一个「壳」，所有的数据都由 <code class="highlighter-rouge">State</code> 提供，这样就把表现层和数据层分开了。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1</pre></td><td class="code"><pre>view = f(state)
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<h4 id="action">Action</h4>
+<p><code class="highlighter-rouge">Action</code> 用来描述发生了什么事情，比如不小心用脚踢到了椅子，神经系统就会把这个信息传递给大脑，这个信息就是 <code class="highlighter-rouge">Action</code>，而大脑就是之后要讲到的 <code class="highlighter-rouge">Store</code>。</p>
+
+<h4 id="store">Store</h4>
+<p>这是核心模块，就像大脑会不停地接受到各种 <code class="highlighter-rouge">Action</code>，并作出反应，只不过在这里 <code class="highlighter-rouge">Store</code> 并不具备「做决定」的能力，而是把这个 <code class="highlighter-rouge">Action</code> 交给了所有可能关心它的 <code class="highlighter-rouge">Reducers</code>。</p>
+
+<p>ReSwift 推荐一个 App 只有一个 <code class="highlighter-rouge">Store</code>，在实际情况中，如果这么做的话，会带来不少的副作用，比如所有的模块都需要依赖 <code class="highlighter-rouge">Store</code>，这个 <code class="highlighter-rouge">State</code> 会很庞大，不可避免的会影响性能。所以，单个页面或模块有一个 <code class="highlighter-rouge">Store</code> 会比较合适。</p>
+
+<h4 id="state">State</h4>
+<p><code class="highlighter-rouge">State</code> 是一个隐形的杀手，因为使用它极其方便，而它的危害也不会瞬间爆发，就像温水煮青蛙一样，等发现问题越来越多、被各种多线程问题困扰时，就会感受到它的威力了。</p>
+
+<p>所以把 <code class="highlighter-rouge">State</code> 单独拎出来，并且使用 <a href="https://developer.apple.com/videos/play/wwdc2015/414/">Value Types</a> 来解决各种多线程或变量被修改导致的问题。</p>
+
+<p>WWDC 的 <a href="https://developer.apple.com/videos/play/wwdc2016/419/">Protocol and Value Oriented Programming in UIKit Apps</a> 中也推荐使用 Value Composition，而不是继承，同时把 State 集中到一个地方处理，也有助于 Local Reasoning。</p>
+
+<h3 id="为什么要使用-reswift">为什么要使用 ReSwift</h3>
+<p>确切说来是为什么要使用「单向数据流」的架构模式，主要有这么几个好处：</p>
+
+<ol>
+  <li>数据单向流动容易让结构变得清晰，出问题时也更容易排查。</li>
+  <li>使用了 「Value Types」作为流动的数据，避免各种诡异的「不小心被篡改」或多线程 bug。</li>
+  <li>在统一的入口处理数据（State），比起散落在各处更加容易控制。</li>
+</ol>
+
+<p><a href="https://github.com/ReSwift/ReSwift">Readme</a> 里带了一个简单的 Demo，可以感受下。</p>
+
+<h3 id="源码一瞥">源码一瞥</h3>
+<p>ReSwift (3.0.0) 的源码很精简，对 Swift 熟悉的话，很快就能看完。说下我自己在看源码的过程中学到的一些 tips 吧。</p>
+
+<h4 id="reduce-的使用">Reduce 的使用</h4>
+<p><code class="highlighter-rouge">reduce</code> 在函数式编程的领域里会经常被用到，甚至可以实现 <code class="highlighter-rouge">map</code> / <code class="highlighter-rouge">filter</code> 等功能，足见其强大。它的运行规则是以函数的处理结果作为初始值，再结合数组中的元素返回处理结果，不断循环，直到数组中的元素全部处理完成。</p>
+
+<p><img src="/image/14808586998591.png" alt="" /></p>
+
+<p>在 Swift 中，它是 <code class="highlighter-rouge">Sequence</code> 协议扩展的一个方法，签名如下</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1</pre></td><td class="code"><pre><span class="kd">public</span> <span class="kd">func</span> <span class="n">reduce</span><span class="o">&lt;</span><span class="kt">Result</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">initialResult</span><span class="p">:</span> <span class="kt">Result</span><span class="p">,</span> <span class="n">_</span> <span class="nv">nextPartialResult</span><span class="p">:</span> <span class="p">(</span><span class="kt">Result</span><span class="p">,</span> <span class="k">Self</span><span class="o">.</span><span class="kt">Iterator</span><span class="o">.</span><span class="kt">Element</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Result</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Result</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<p>在 ReSwift 中有好几个地方都用到了 <code class="highlighter-rouge">reduce</code>，比如通过它来达到 <code class="highlighter-rouge">combineReducer</code> 的效果</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8</pre></td><td class="code"><pre><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">CombinedReducer</span><span class="p">:</span> <span class="kt">AnyReducer</span> <span class="p">{</span>
+	  <span class="c1">// self.reducers 包含了 AnyReducer 的实例</span>
+    <span class="kd">public</span> <span class="kd">func</span> <span class="nf">_handleAction</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span> <span class="kt">Action</span><span class="p">,</span> <span class="nv">state</span><span class="p">:</span> <span class="kt">StateType</span><span class="p">?)</span> <span class="o">-&gt;</span> <span class="kt">StateType</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">reducers</span><span class="o">.</span><span class="nf">reduce</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="p">{</span> <span class="p">(</span><span class="n">currentState</span><span class="p">,</span> <span class="n">reducer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">StateType</span> <span class="k">in</span>
+            <span class="k">return</span> <span class="n">reducer</span><span class="o">.</span><span class="nf">_handleAction</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span> <span class="n">action</span><span class="p">,</span> <span class="nv">state</span><span class="p">:</span> <span class="n">currentState</span><span class="p">)</span>
+        <span class="p">}</span><span class="o">!</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<p>按照入队列的先后，reducer 被依次执行，并且把生成的新的 <code class="highlighter-rouge">State</code> 作为下一个循环的初始值传递给下一个 reducer。</p>
+
+<p>在处理 <code class="highlighter-rouge">middleware</code> 时，也有用到类似的技术，不过那个更加复杂些，涉及到<a href="https://zh.wikipedia.org/zh-hans/%E9%AB%98%E9%98%B6%E5%87%BD%E6%95%B0">高阶函数</a>。</p>
+
+<h4 id="装饰器模式">装饰器模式</h4>
+<p>装饰器模式简单来说就是在不改变类／方法原有功能的前提下，提供了一些额外的能力。比较常见的有 validator，客户端提交的数据要入库前需要做一下校验，不通过的话直接返回。在 python 里装饰器非常常见，比如在一个方法上加一个 <code class="highlighter-rouge">@cached</code> 或者 <code class="highlighter-rouge">@validate</code> 等 annotation。</p>
+
+<p>在实现 Reducer 时，有用到这个模式：</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15</pre></td><td class="code"><pre><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">AnyReducer</span> <span class="p">{</span>
+    <span class="kd">func</span> <span class="nf">_handleAction</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span> <span class="kt">Action</span><span class="p">,</span> <span class="nv">state</span><span class="p">:</span> <span class="kt">StateType</span><span class="p">?)</span> <span class="o">-&gt;</span> <span class="kt">StateType</span>
+<span class="p">}</span>
+
+<span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">Reducer</span><span class="p">:</span> <span class="kt">AnyReducer</span> <span class="p">{</span>
+    <span class="k">associatedtype</span> <span class="kt">ReducerStateType</span>
+
+    <span class="kd">func</span> <span class="nf">handleAction</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span> <span class="kt">Action</span><span class="p">,</span> <span class="nv">state</span><span class="p">:</span> <span class="kt">ReducerStateType</span><span class="p">?)</span> <span class="o">-&gt;</span> <span class="kt">ReducerStateType</span>
+<span class="p">}</span>
+
+<span class="kd">extension</span> <span class="kt">Reducer</span> <span class="p">{</span>
+    <span class="kd">public</span> <span class="kd">func</span> <span class="nf">_handleAction</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span> <span class="kt">Action</span><span class="p">,</span> <span class="nv">state</span><span class="p">:</span> <span class="kt">StateType</span><span class="p">?)</span> <span class="o">-&gt;</span> <span class="kt">StateType</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nf">withSpecificTypes</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="nv">state</span><span class="p">:</span> <span class="n">state</span><span class="p">,</span> <span class="nv">function</span><span class="p">:</span> <span class="n">handleAction</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<p><code class="highlighter-rouge">_handleAction</code> 对 <code class="highlighter-rouge">handleAction</code> 做了个校验，（<code class="highlighter-rouge">withSpecificTypes</code> 函数里如果校验不通过，<code class="highlighter-rouge">handleAction</code> 不会被执行），这样对于使用者，只需继承 Reducer 实现 <code class="highlighter-rouge">handleAction</code> 方法，ReSwift 内部调用时会使用 <code class="highlighter-rouge">_handleAction</code> 来做一些校验。</p>
+
+<p>在 <code class="highlighter-rouge">StoreSubscriber</code> 里也有用到类似的技术。</p>
+
+<h4 id="associatedtype-的使用">associatedtype 的使用</h4>
+<p>通过 <code class="highlighter-rouge">associatedtype</code>，可以让 protocol 使用 <code class="highlighter-rouge">generic</code>, Natasha 还写过一篇关于 <a href="https://www.natashatherobot.com/swift-what-are-protocols-with-associated-types/">PAT 使用的文章</a>，里面以宠物小精灵为例，通过 PAT 让不同的小精灵具备了不同的能力。不过使用了 <code class="highlighter-rouge">associatedtype</code> 或 <code class="highlighter-rouge">Self</code> 后，就不能作为变量的类型来声明了，比如 <code class="highlighter-rouge">var something: AProtoclWithAssociatedType</code> 这样编译器会报错，具体原因可以参考<a href="http://krakendev.io/blog/generic-protocols-and-their-shortcomings">这篇文章</a>，主要是因为无法指定 Generic 的类型，导致编译器无法在编译期间就确定具体的类型，对于强类型语言来说，这是不能接受的。</p>
+
+<p>ReSwift 中，在定义 StoreType 时，有用到 <code class="highlighter-rouge">associatedtype</code></p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9</pre></td><td class="code"><pre><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">StoreType</span> <span class="p">{</span>
+
+    <span class="k">associatedtype</span> <span class="kt">State</span><span class="p">:</span> <span class="kt">StateType</span>
+
+    <span class="c1">/// Initializes the store with a reducer and an intial state.</span>
+    <span class="nf">init</span><span class="p">(</span><span class="nv">reducer</span><span class="p">:</span> <span class="kt">AnyReducer</span><span class="p">,</span> <span class="nv">state</span><span class="p">:</span> <span class="kt">State</span><span class="p">?)</span>
+    
+    <span class="c1">//...</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<p>在定义 reducer protocol 时，也有用到（也是关联了 StateType）。</p>
+
+<h4 id="对外只读对内可读写">对外只读，对内可读写</h4>
+<p>在 OC 时代，通常的做法是在 .h 里声明为 <code class="highlighter-rouge">readonly</code>，然后在 .m 的 class extension 里，将同名的属性声明为 <code class="highlighter-rouge">readwrite</code>。</p>
+
+<p>Swift 没有头文件的概念，直接一句话搞定 <code class="highlighter-rouge">private(set)</code></p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><table style="border-spacing: 0"><tbody><tr><td class="gutter gl" style="text-align: right"><pre class="lineno">1
+2
+3
+4</pre></td><td class="code"><pre><span class="kd">struct</span> <span class="kt">Subscription</span><span class="o">&lt;</span><span class="kt">State</span><span class="p">:</span> <span class="kt">StateType</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="kd">private(set)</span> <span class="k">weak</span> <span class="k">var</span> <span class="nv">subscriber</span><span class="p">:</span> <span class="kt">AnyStoreSubscriber</span><span class="p">?</span> <span class="o">=</span> <span class="kc">nil</span>
+    <span class="k">let</span> <span class="nv">selector</span><span class="p">:</span> <span class="p">((</span><span class="kt">State</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Any</span><span class="p">)?</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table>
+</div>
+</div>
+
+<p>subscription 希望外部可以拿到 subscriber，但不要修改它，于是在前面加了 <code class="highlighter-rouge">private(set)</code>，也就是把 <code class="highlighter-rouge">set</code> 方法标记为 private。</p>
+
+<h3 id="小结">小结</h3>
+<p>ReSwift 还是挺值的一试的，一方面是因为单向数据流确实对程序的清晰度有帮助，另一方面 ReSwift 的代码很简洁，内部实现比较容易搞明白，这样即使出问题也比较容易定位。<a href="https://realm.io/news/benji-encz-unidirectional-data-flow-swift/">Realm</a> 上有作者分享的案例，可以参考下。不足嘛肯定也有，比如功能比较简单，只是做了数据流，缺少 Diff 支持，在做列表更新／删除时会比较痛苦；如何与 MVVM 等比较成熟的架构有效地结合起来等。</p>
+
+<p>除此之外，由于数据都通过 State 来传递，可以在出 bug 时，上传当时的 state 内容方便定位；还可以基于 State 来做<a href="https://github.com/ReSwift/ReSwift#demo">时光机</a>。不妨在 Side Project 中尝试下。</p>
+
+
+					<br />
+					--EOF--
+					<p>若无特别说明，本站文章均为原创，转载请保留链接，谢谢</p>
+				</div>
+				<div id="disqus_thread"></div>
+				<script type="text/javascript">
+				  /**
+					* var disqus_identifier; [Optional but recommended: Define a unique identifier (e.g. post id or slug) for this thread]
+					*/
+				  (function() {
+				   var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				   dsq.src = 'http://lzyyblog.disqus.com/embed.js';
+				   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+				  })();
+				</script>
+				<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript=lzyyblog">comments powered by Disqus.</a></noscript>
+			</div>
+			<div id="footer">
+	<p style="color:#ccc;font-size:12px;text-align: center">make the world a little better and easier</p>
+	<p style="clear:both"></p>
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1281124-24', 'limboy.me');
+  ga('send', 'pageview');
+
+</script>
+
+		</div>
+	</body>
+</html>
