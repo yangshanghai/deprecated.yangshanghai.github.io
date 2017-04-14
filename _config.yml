@@ -1,6 +1,7 @@
 highlighter: rouge
-
+markdown: kramdown
 kramdown:
+  input: GFM
   syntax_highlighter: rouge
 
   # Rouge Highlighter in Kramdown › http://kramdown.gettalong.org/syntax_highlighter/rouge.html
